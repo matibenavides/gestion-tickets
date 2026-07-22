@@ -31,7 +31,7 @@ export default function QuickTicketForm({ contacts }: { contacts: Contact[] }) {
   const [category, setCategory] = useState<TicketCategory>("OTRO");
   const [contactId, setContactId] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
-  const [modal, setModal] = useState<{ ticketId: string; contact: Contact } | null>(null);
+  const [modal, setModal] = useState<{ ticketId: string; folio: number; contact: Contact } | null>(null);
 
   function handleParse() {
     if (!raw.trim()) {
@@ -91,7 +91,7 @@ export default function QuickTicketForm({ contacts }: { contacts: Contact[] }) {
     try {
       const row = await createTicket({ callerName, location, problem, rawNote: raw, category, assignedContactId: contactId }, "DRAFT");
       const contact = contacts.find((c) => c.id === contactId)!;
-      setModal({ ticketId: row.id, contact });
+      setModal({ ticketId: row.id, folio: row.ticketNumber, contact });
     } catch (e) {
       message.error(e instanceof Error ? e.message : "Error al guardar.");
     } finally {
@@ -198,7 +198,7 @@ export default function QuickTicketForm({ contacts }: { contacts: Contact[] }) {
       <WhatsAppModal
         open={!!modal}
         ticketId={modal?.ticketId}
-        data={{ callerName, location, problem }}
+        data={{ folio: modal?.folio, callerName, location, problem }}
         contact={modal?.contact ?? null}
         onClose={() => setModal(null)}
         onSent={() => {

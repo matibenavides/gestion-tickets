@@ -1,11 +1,11 @@
 {
     "schema_version": 2,
-    "commit": "",
-    "indexed_at": "2026-07-22T01:49:25Z",
-    "project": "Tickets",
-    "nodes": 239,
-    "edges": 506,
-    "original_size": 1638400,
-    "compressed_size": 223809,
-    "compression_level": 9
+    "commit": "eb1ce5f6e4f708489c5c9c206671dbf5db5622bb",
+    "indexed_at": "2026-07-22T20:45:44Z",
+    "project": "C-Users-Usuario-Desktop-gestion-tickets",
+    "nodes": 330,
+    "edges": 618,
+    "original_size": 2293760,
+    "compressed_size": 268987,
+    "compression_level": 3
 }

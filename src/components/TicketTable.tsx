@@ -21,7 +21,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { FaWhatsapp } from "react-icons/fa";
 import { MdDelete, MdEdit, MdSearch } from "react-icons/md";
-import { deleteTicket, setTicketStatus, updateTicket } from "@/app/actions/tickets";
+import { deleteTicket, setTicketStatus, setTicketContact, updateTicket } from "@/app/actions/tickets";
 import {
   CATEGORY_COLORS,
   CATEGORY_LABELS,
@@ -34,6 +34,7 @@ import {
   type TicketCategory,
   type TicketStatus,
 } from "@/types";
+import { formatFolio } from "@/lib/whatsapp";
 import WhatsAppModal from "./WhatsAppModal";
 
 const { RangePicker } = DatePicker;
@@ -76,7 +77,15 @@ export default function TicketTable({
     return [...set].sort().map((z) => ({ value: z, label: z }));
   }, [tickets]);
 
-  const contactOptions = contacts.map((c) => ({ value: c.id, label: `${c.name} — ${c.role || c.zone || "sin rol"}` }));
+  const editContactOptions = useMemo(() => {
+    const currentId = editing?.assignedContactId;
+    return contacts
+      .filter((c) => c.isActive || c.id === currentId)
+      .map((c) => ({
+        value: c.id,
+        label: `${c.name} — ${c.role || c.zone || "sin rol"}${!c.isActive ? " (Inactivo)" : ""}`,
+      }));
+  }, [contacts, editing]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -103,6 +112,16 @@ export default function TicketTable({
       router.refresh();
     } catch {
       message.error("No se pudo cambiar el estado.");
+    }
+  }
+
+  async function onContactChange(id: string, contactId: string | null) {
+    try {
+      await setTicketContact(id, contactId);
+      message.success("Contacto asignado actualizado.");
+      router.refresh();
+    } catch {
+      message.error("No se pudo cambiar el contacto asignado.");
     }
   }
 
@@ -142,6 +161,13 @@ export default function TicketTable({
 
   const columns: ColumnsType<Ticket> = [
     {
+      title: "Folio",
+      dataIndex: "ticketNumber",
+      width: 90,
+      render: (n: number) => <Text strong style={{ fontFamily: "var(--font-geist-mono), monospace" }}>{formatFolio(n)}</Text>,
+      sorter: (a, b) => a.ticketNumber - b.ticketNumber,
+    },
+    {
       title: "Fecha",
       dataIndex: "createdAt",
       width: 120,
@@ -178,8 +204,28 @@ export default function TicketTable({
     {
       title: "Asignado",
       dataIndex: "assignedContactId",
-      width: 130,
-      render: (id: string | null) => (id && contactById.get(id) ? contactById.get(id)!.name : <Text type="secondary">—</Text>),
+      width: 180,
+      render: (id: string | null, row) => {
+        const rowContactOptions = contacts
+          .filter((c) => c.isActive || c.id === id)
+          .map((c) => ({
+            value: c.id,
+            label: `${c.name} — ${c.role || c.zone || "sin rol"}${!c.isActive ? " (Inactivo)" : ""}`,
+          }));
+        return (
+          <Select
+            size="small"
+            value={id ?? undefined}
+            style={{ width: 165 }}
+            placeholder="Sin asignar"
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            onChange={(val) => onContactChange(row.id, val ?? null)}
+            options={rowContactOptions}
+          />
+        );
+      },
     },
     {
       title: "Acciones",
@@ -260,7 +306,7 @@ export default function TicketTable({
         columns={columns}
         dataSource={filtered}
         size="middle"
-        scroll={{ x: 1100 }}
+        scroll={{ x: 1150 }}
         pagination={{ pageSize: showFilters ? 10 : 5, hideOnSinglePage: !showFilters, showSizeChanger: false }}
       />
 
@@ -287,7 +333,7 @@ export default function TicketTable({
             <Select options={CATEGORY_ORDER.map((c) => ({ value: c, label: CATEGORY_LABELS[c] }))} />
           </Form.Item>
           <Form.Item name="assignedContactId" label="Asignado a">
-            <Select allowClear showSearch optionFilterProp="label" options={contactOptions} placeholder="Sin asignar" />
+            <Select allowClear showSearch optionFilterProp="label" options={editContactOptions} placeholder="Sin asignar" />
           </Form.Item>
         </Form>
       </Modal>
@@ -296,6 +342,7 @@ export default function TicketTable({
         open={!!resend}
         ticketId={resend?.ticket.id}
         data={{
+          folio: resend?.ticket.ticketNumber,
           callerName: resend?.ticket.callerName ?? "",
           location: resend?.ticket.location ?? "",
           problem: resend?.ticket.problem ?? "",

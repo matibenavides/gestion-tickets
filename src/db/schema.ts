@@ -2,6 +2,7 @@ import {
   pgTable,
   pgEnum,
   uuid,
+  serial,
   text,
   boolean,
   timestamp,
@@ -35,6 +36,8 @@ export const contacts = pgTable("contacts", {
 
 export const tickets = pgTable("tickets", {
   id: uuid("id").primaryKey().defaultRandom(),
+  // Folio correlativo legible para humanos (autoincremental), aparte del UUID interno.
+  ticketNumber: serial("ticket_number").notNull(),
   callerName: text("caller_name").notNull().default(""),
   location: text("location").notNull().default(""),
   problem: text("problem").notNull().default(""),

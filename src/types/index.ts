@@ -27,6 +27,7 @@ export interface Contact {
 
 export interface Ticket {
   id: string;
+  ticketNumber: number;
   callerName: string;
   location: string;
   problem: string;

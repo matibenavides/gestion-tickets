@@ -1,4 +1,5 @@
 export interface TicketMessageData {
+  folio?: number; // Folio correlativo del ticket (autoincremental)
   callerName: string;
   location: string;
   problem: string;
@@ -12,15 +13,21 @@ function hhmm(): string {
   });
 }
 
+/** Folio legible: #0001, #0042, ... */
+export function formatFolio(n?: number): string {
+  return n ? `#${String(n).padStart(4, "0")}` : "#—";
+}
+
 /** Mensaje con la nomenclatura estandarizada para el supervisor/técnico. */
 export function formatWhatsAppMessage(t: TicketMessageData): string {
-  return [
-    "📌 *NUEVO TICKET DE SOPORTE*",
-    `👤 *Solicitante:* ${t.callerName?.trim() || "-"}`,
-    `📍 *Ubicación:* ${t.location?.trim() || "-"}`,
-    `🛠️ *Requerimiento:* ${t.problem?.trim() || "-"}`,
-    `🕒 *Hora:* ${t.time || hhmm()}`,
-  ].join("\n");
+  const lines = [
+    "*NUEVO TICKET DE SOPORTE*",
+    t.folio ? `*Folio:* ${formatFolio(t.folio)}` : null,
+    `*Solicitante:* ${t.callerName?.trim() || "-"}`,
+    `*Ubicación:* ${t.location?.trim() || "-"}`,
+    `*Requerimiento:* ${t.problem?.trim() || "-"}`,
+  ];
+  return lines.filter(Boolean).join("\n");
 }
 
 /** Forma compacta: "Nombre | Lugar | Problema". */

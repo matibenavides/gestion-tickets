@@ -72,6 +72,16 @@ export async function setTicketStatus(id: string, status: TicketStatus) {
   return row;
 }
 
+export async function setTicketContact(id: string, contactId: string | null) {
+  const [row] = await db
+    .update(tickets)
+    .set({ assignedContactId: contactId, updatedAt: new Date() })
+    .where(eq(tickets.id, id))
+    .returning();
+  revalidateAll();
+  return row;
+}
+
 /** Al enviar por WhatsApp: registra la hora y, si estaba en borrador, pasa a "Enviado". */
 export async function markTicketSent(id: string) {
   const [current] = await db.select().from(tickets).where(eq(tickets.id, id));
