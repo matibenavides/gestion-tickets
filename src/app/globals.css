@@ -1,0 +1,17 @@
+/* Tailwind v4 SIN preflight: importamos theme + utilities pero omitimos la capa
+   `base` (el reset de Tailwind) para que no pise los estilos de Ant Design. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+:root {
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+}

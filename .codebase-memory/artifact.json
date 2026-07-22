@@ -1,0 +1,11 @@
+{
+    "schema_version": 2,
+    "commit": "",
+    "indexed_at": "2026-07-22T01:49:25Z",
+    "project": "Tickets",
+    "nodes": 239,
+    "edges": 506,
+    "original_size": 1638400,
+    "compressed_size": 223809,
+    "compression_level": 9
+}
