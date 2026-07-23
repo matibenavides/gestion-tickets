@@ -87,3 +87,8 @@ export const CATEGORY_ORDER: TicketCategory[] = [
   "TRASLADOS",
   "OTRO",
 ];
+
+/** Borrador crudo: guardado antes de clasificar/formatear, sin campos aún completados. */
+export function isRawDraft(t: Pick<Ticket, "callerName" | "location" | "problem" | "rawNote">) {
+  return !t.callerName.trim() && !t.location.trim() && !t.problem.trim() && !!t.rawNote.trim();
+}

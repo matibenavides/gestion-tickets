@@ -8,17 +8,20 @@ import QuickTicketForm from "@/components/QuickTicketForm";
 import StatCards from "@/components/StatCards";
 import TicketTable from "@/components/TicketTable";
 import { computeStats } from "@/lib/stats";
+import { isRawDraft } from "@/types";
 
 export default async function DashboardPage() {
   const allContacts = await listContacts();
   const activeContacts = allContacts.filter((c) => c.isActive);
   const allTickets = await db.select().from(ticketsTable).orderBy(desc(ticketsTable.createdAt));
-  const stats = computeStats(allTickets);
-  const recent = allTickets.slice(0, 8);
+  const rawDrafts = allTickets.filter(isRawDraft);
+  const realTickets = allTickets.filter((t) => !isRawDraft(t));
+  const stats = computeStats(realTickets);
+  const recent = realTickets.slice(0, 8);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 1280, margin: "0 auto" }}>
-      <QuickTicketForm contacts={activeContacts} />
+      <QuickTicketForm contacts={activeContacts} rawDrafts={rawDrafts} />
       <StatCards stats={stats} />
       <section>
         <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 12px" }}>Últimos tickets</h2>
