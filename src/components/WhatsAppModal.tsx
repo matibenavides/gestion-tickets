@@ -4,7 +4,7 @@ import { App, Button, Modal, Typography } from "antd";
 import { useState } from "react";
 import { FaWhatsapp } from "react-icons/fa";
 import { MdComputer } from "react-icons/md";
-import { markTicketSent } from "@/app/actions/tickets";
+import { markTicketSent, sendTicketWhatsApp } from "@/app/actions/tickets";
 import {
   buildWhatsAppAppUrl,
   buildWhatsAppUrl,
@@ -45,6 +45,28 @@ export default function WhatsAppModal({
       a.remove();
     } else {
       window.open(buildWhatsAppUrl(contact!.whatsappNumber, msg), "_blank", "noopener,noreferrer");
+    }
+  }
+
+  async function sendViaZavu() {
+    if (!ticketId) {
+      message.warning("Guarda el ticket antes de enviarlo.");
+      return;
+    }
+    if (!contact) {
+      message.warning("No hay contacto asignado.");
+      return;
+    }
+    setSending(true);
+    try {
+      await sendTicketWhatsApp(ticketId);
+      message.success(`Enviado por WhatsApp a ${contact.name}.`);
+      onSent?.();
+      onClose();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : "No se pudo enviar por Zavu.");
+    } finally {
+      setSending(false);
     }
   }
 
@@ -94,8 +116,11 @@ export default function WhatsAppModal({
         <Button icon={<MdComputer />} loading={sending} onClick={() => send("app")} disabled={!contact}>
           Abrir app de escritorio
         </Button>
-        <Button type="primary" icon={<FaWhatsapp />} loading={sending} onClick={() => send("web")} disabled={!contact}>
+        <Button icon={<FaWhatsapp />} loading={sending} onClick={() => send("web")} disabled={!contact}>
           Abrir WhatsApp Web
+        </Button>
+        <Button type="primary" icon={<FaWhatsapp />} loading={sending} onClick={sendViaZavu} disabled={!contact}>
+          Enviar automático (Zavu)
         </Button>
       </div>
     </Modal>

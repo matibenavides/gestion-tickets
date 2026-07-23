@@ -1,6 +1,11 @@
 // Self-check de los enlaces de WhatsApp. Correr: npm run test:whatsapp
 import assert from "node:assert";
 import { buildWhatsAppAppUrl, buildWhatsAppUrl, compactLine, formatFolio, formatWhatsAppMessage } from "./whatsapp";
+import { toE164 } from "./zavu";
+
+// Zavu exige E.164: solo dígitos precedidos de "+", sin espacios ni guiones.
+assert.equal(toE164("+56 9 1234 5678"), "+56912345678");
+assert.equal(toE164("569-1234-5678"), "+56912345678");
 
 // El número queda solo con dígitos (sin +, espacios ni guiones) y el texto va URL-encoded.
 const web = buildWhatsAppUrl("+56 9 1234 5678", "hola mundo & más");

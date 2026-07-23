@@ -3,7 +3,9 @@
 import { desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { tickets } from "@/db/schema";
+import { contacts, tickets } from "@/db/schema";
+import { formatFolio, formatWhatsAppMessage } from "@/lib/whatsapp";
+import { sendZavuMessage, sendZavuTemplate } from "@/lib/zavu";
 import type { TicketCategory, TicketStatus } from "@/types";
 
 function revalidateAll() {
@@ -99,4 +101,37 @@ export async function markTicketSent(id: string) {
 export async function deleteTicket(id: string) {
   await db.delete(tickets).where(eq(tickets.id, id));
   revalidateAll();
+}
+
+/** Envía el ticket por WhatsApp usando la API de Zavu y lo marca como enviado. */
+export async function sendTicketWhatsApp(id: string) {
+  const [ticket] = await db.select().from(tickets).where(eq(tickets.id, id));
+  if (!ticket) throw new Error("Ticket no encontrado.");
+  if (!ticket.assignedContactId) throw new Error("El ticket no tiene contacto asignado.");
+  const [contact] = await db
+    .select()
+    .from(contacts)
+    .where(eq(contacts.id, ticket.assignedContactId));
+  if (!contact) throw new Error("El contacto asignado ya no existe.");
+
+  const templateId = process.env.ZAVU_WHATSAPP_TEMPLATE_ID;
+  if (templateId) {
+    // ponytail: la plantilla en Zavu debe tener 4 variables en ESTE orden:
+    // {{1}} folio · {{2}} solicitante · {{3}} ubicación · {{4}} requerimiento.
+    await sendZavuTemplate(contact.whatsappNumber, templateId, {
+      "1": formatFolio(ticket.ticketNumber),
+      "2": ticket.callerName || "-",
+      "3": ticket.location || "-",
+      "4": ticket.problem || "-",
+    });
+  } else {
+    const text = formatWhatsAppMessage({
+      folio: ticket.ticketNumber,
+      callerName: ticket.callerName,
+      location: ticket.location,
+      problem: ticket.problem,
+    });
+    await sendZavuMessage(contact.whatsappNumber, text, "whatsapp");
+  }
+  return markTicketSent(id);
 }
