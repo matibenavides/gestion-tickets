@@ -3,8 +3,9 @@
 import { App, Button, Modal, Typography } from "antd";
 import { useState } from "react";
 import { FaWhatsapp } from "react-icons/fa";
-import { MdComputer } from "react-icons/md";
+import { MdBolt, MdComputer } from "react-icons/md";
 import { markTicketSent } from "@/app/actions/tickets";
+import { sendTicketViaZavu } from "@/app/actions/zavu";
 import {
   buildWhatsAppAppUrl,
   buildWhatsAppUrl,
@@ -33,6 +34,7 @@ export default function WhatsAppModal({
 }) {
   const { message } = App.useApp();
   const [sending, setSending] = useState(false);
+  const [sendingZavu, setSendingZavu] = useState(false);
   const msg = formatWhatsAppMessage(data);
 
   function openChannel(kind: "web" | "app") {
@@ -66,6 +68,24 @@ export default function WhatsAppModal({
     }
   }
 
+  /** Envío automático (sin abrir WhatsApp) vía la API sandbox de Zavu. */
+  async function sendViaZavu() {
+    if (!contact) {
+      message.warning("No hay contacto asignado.");
+      return;
+    }
+    setSendingZavu(true);
+    try {
+      await sendTicketViaZavu(ticketId, contact.whatsappNumber, msg);
+      message.success("Mensaje enviado vía Zavu y ticket marcado como enviado.");
+      onSent?.();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : "No se pudo enviar el mensaje vía Zavu.");
+    } finally {
+      setSendingZavu(false);
+    }
+  }
+
   return (
     <Modal open={open} onCancel={onClose} title="Enviar por WhatsApp" footer={null} destroyOnHidden>
       <Text type="secondary">
@@ -91,10 +111,19 @@ export default function WhatsAppModal({
       </Text>
       <div style={{ marginTop: 20, display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
         <Button onClick={onClose}>Cerrar</Button>
-        <Button icon={<MdComputer />} loading={sending} onClick={() => send("app")} disabled={!contact}>
+        <Button
+          icon={<MdBolt />}
+          loading={sendingZavu}
+          onClick={sendViaZavu}
+          disabled={!contact || sending}
+          title="Envía el mensaje automáticamente vía la API sandbox de Zavu, sin abrir WhatsApp."
+        >
+          Enviar automático (Zavu)
+        </Button>
+        <Button icon={<MdComputer />} loading={sending} onClick={() => send("app")} disabled={!contact || sendingZavu}>
           Abrir app de escritorio
         </Button>
-        <Button type="primary" icon={<FaWhatsapp />} loading={sending} onClick={() => send("web")} disabled={!contact}>
+        <Button type="primary" icon={<FaWhatsapp />} loading={sending} onClick={() => send("web")} disabled={!contact || sendingZavu}>
           Abrir WhatsApp Web
         </Button>
       </div>
