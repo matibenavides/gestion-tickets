@@ -1,11 +1,11 @@
 {
     "schema_version": 2,
-    "commit": "d00592f722fae343aeea27b5aad699a6f4e9f03e",
-    "indexed_at": "2026-07-23T13:45:31Z",
+    "commit": "5d3ba9a93192f458694f9b1c7639a0b83446ccc6",
+    "indexed_at": "2026-07-24T13:22:06Z",
     "project": "C-Users-Usuario-Desktop-gestion-tickets",
-    "nodes": 349,
-    "edges": 670,
-    "original_size": 2490368,
-    "compressed_size": 297301,
+    "nodes": 532,
+    "edges": 843,
+    "original_size": 2818048,
+    "compressed_size": 322392,
     "compression_level": 3
 }
