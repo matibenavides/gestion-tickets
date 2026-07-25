@@ -3,9 +3,11 @@ export const dynamic = "force-dynamic";
 import { listContacts } from "@/app/actions/contacts";
 import { listTickets } from "@/app/actions/tickets";
 import TicketTable from "@/components/TicketTable";
+import { isRawDraft } from "@/types";
 
 export default async function TicketsPage() {
-  const [tickets, contacts] = await Promise.all([listTickets(), listContacts()]);
+  const [allTickets, contacts] = await Promise.all([listTickets(), listContacts()]);
+  const tickets = allTickets.filter((t) => !isRawDraft(t));
 
   return (
     <div style={{ maxWidth: 1400, margin: "0 auto" }}>

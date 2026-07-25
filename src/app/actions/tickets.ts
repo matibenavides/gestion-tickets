@@ -38,7 +38,7 @@ export async function listTickets() {
 }
 
 export async function createTicket(input: TicketInput, status: TicketStatus = "DRAFT") {
-  if (!input.callerName?.trim() && !input.location?.trim() && !input.problem?.trim()) {
+  if (!input.callerName?.trim() && !input.location?.trim() && !input.problem?.trim() && !input.rawNote?.trim()) {
     throw new Error("El ticket está vacío: completa al menos un campo.");
   }
   const [row] = await db

@@ -1,10 +1,10 @@
 "use client";
 
-import { App, Button, Card, Col, Divider, Input, Row, Select, Space, Tag, Typography } from "antd";
+import { App, Badge, Button, Card, Col, Divider, Input, Row, Select, Space, Tag, Typography } from "antd";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FaMagic, FaWhatsapp } from "react-icons/fa";
-import { MdSave } from "react-icons/md";
+import { MdSave, MdStickyNote2 } from "react-icons/md";
 import { createTicket } from "@/app/actions/tickets";
 import { parseCall } from "@/lib/parser";
 import { compactLine } from "@/lib/whatsapp";
@@ -13,14 +13,16 @@ import {
   CATEGORY_LABELS,
   CATEGORY_ORDER,
   type Contact,
+  type Ticket,
   type TicketCategory,
 } from "@/types";
+import RawDraftsList from "./RawDraftsList";
 import WhatsAppModal from "./WhatsAppModal";
 
 const { TextArea } = Input;
 const { Text } = Typography;
 
-export default function QuickTicketForm({ contacts }: { contacts: Contact[] }) {
+export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Contact[]; rawDrafts: Ticket[] }) {
   const { message } = App.useApp();
   const router = useRouter();
 
@@ -32,6 +34,25 @@ export default function QuickTicketForm({ contacts }: { contacts: Contact[] }) {
   const [contactId, setContactId] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
   const [modal, setModal] = useState<{ ticketId: string; folio: number; contact: Contact } | null>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
+
+  async function saveRawDraft() {
+    if (!raw.trim()) {
+      message.warning("Escribe la nota antes de guardar.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await createTicket({ callerName: "", location: "", problem: "", rawNote: raw, category: "OTRO", assignedContactId: null }, "DRAFT");
+      message.success("Borrador guardado sin formatear.");
+      reset();
+      router.refresh();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : "Error al guardar.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   function handleParse() {
     if (!raw.trim()) {
@@ -119,15 +140,14 @@ export default function QuickTicketForm({ contacts }: { contacts: Contact[] }) {
             autoSize={{ minRows: 8, maxRows: 16 }}
             style={{ marginTop: 8, fontSize: 15 }}
           />
-          <Button
-            type="primary"
-            icon={<FaMagic />}
-            onClick={handleParse}
-            block
-            style={{ marginTop: 12 }}
-          >
-            Clasificar / Formatear
-          </Button>
+          <Space.Compact block style={{ marginTop: 12 }}>
+            <Button icon={<MdSave />} loading={saving} onClick={saveRawDraft}>
+              Guardar borrador
+            </Button>
+            <Button type="primary" icon={<FaMagic />} onClick={handleParse} block>
+              Clasificar / Formatear
+            </Button>
+          </Space.Compact>
         </Col>
 
         <Col xs={24} md={13}>
@@ -188,12 +208,19 @@ export default function QuickTicketForm({ contacts }: { contacts: Contact[] }) {
             <Button icon={<MdSave />} loading={saving} onClick={saveDraft}>
               Guardar borrador
             </Button>
+            <Badge count={rawDrafts.length} size="small">
+              <Button icon={<MdStickyNote2 />} onClick={() => setNotesOpen(true)}>
+                Notas sin formatear
+              </Button>
+            </Badge>
             <Button type="primary" icon={<FaWhatsapp />} loading={saving} onClick={sendWhatsApp}>
               Enviar por WhatsApp
             </Button>
           </Space>
         </Col>
       </Row>
+
+      <RawDraftsList drafts={rawDrafts} open={notesOpen} onClose={() => setNotesOpen(false)} />
 
       <WhatsAppModal
         open={!!modal}
