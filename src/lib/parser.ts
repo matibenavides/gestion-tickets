@@ -49,6 +49,17 @@ function stripTrailingPreps(words: string[]): string[] {
   return out;
 }
 
+// ¿Las palabras (en minúscula) arrancan un requerimiento en la posición i?
+function startsProblem(words: string[], i: number): boolean {
+  return PROBLEM_TRIGGERS.some((tr) =>
+    tr.includes(" ") ? words.slice(i).join(" ").startsWith(tr) : words[i].startsWith(tr),
+  );
+}
+
+function hasLocationWord(words: string[]): boolean {
+  return words.some((w) => LOCATION_WORDS.includes(w));
+}
+
 export function detectCategory(text: string): TicketCategory {
   const t = text.toLowerCase();
   for (const [cat, words] of CATEGORY_RULES) {
@@ -79,6 +90,33 @@ function parseLabeled(text: string): Omit<ParsedTicket, "category"> | null {
 }
 
 /**
+ * Notas multilínea: el operador escribe un campo por línea (nombre, lugar y
+ * problema en cualquier orden). Cada bloque se clasifica por su contenido en
+ * vez de aplanar los saltos de línea y perder la separación.
+ */
+function parseBlocks(raw: string): Omit<ParsedTicket, "category"> | null {
+  const blocks = raw
+    .split(/\r?\n/)
+    .map((b) => stripEdges(b.replace(/\s+/g, " ")))
+    .filter(Boolean);
+  if (blocks.length < 2) return null;
+
+  let location = "";
+  let problem = "";
+  const names: string[] = [];
+  for (const b of blocks) {
+    const words = b.toLowerCase().split(" ");
+    // Requerimiento primero: suele mencionar el box/sala, así no lo roba "lugar".
+    if (!problem && words.some((_, i) => startsProblem(words, i))) problem = b;
+    else if (!location && hasLocationWord(words)) location = b;
+    else names.push(b);
+  }
+  // Sin lugar ni problema reconocible no hay estructura fiable: probar texto libre.
+  if (!location && !problem) return null;
+  return { callerName: names.join(" "), location, problem };
+}
+
+/**
  * Asistente heurístico: convierte texto libre en {nombre, lugar, problema, categoría}.
  * No es NLP real; el operador siempre puede corregir los campos antes de guardar.
  * ponytail: heurística por palabras clave; techo conocido, subir a IA (OpenAI/Claude)
@@ -105,17 +143,17 @@ export function parseCall(raw: string): ParsedTicket {
   const labeled = parseLabeled(text);
   if (labeled) return { ...labeled, category };
 
-  // 3) Texto libre.
+  // 3) Multilínea: un campo por línea (nombre/lugar/problema en cualquier orden).
+  const blocks = parseBlocks(raw || "");
+  if (blocks) return { ...blocks, category };
+
+  // 4) Texto libre.
   const words = text.split(" ");
   const lower = words.map((w) => w.toLowerCase());
 
   let problemStart = -1;
   for (let i = 0; i < lower.length; i++) {
-    const rest = lower.slice(i).join(" ");
-    const hit = PROBLEM_TRIGGERS.some((tr) =>
-      tr.includes(" ") ? rest.startsWith(tr) : lower[i].startsWith(tr),
-    );
-    if (hit) {
+    if (startsProblem(lower, i)) {
       problemStart = i;
       break;
     }

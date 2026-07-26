@@ -32,4 +32,12 @@ assert.equal(detectCategory("solicita desbloqueo de usuario"), "CUENTAS");
 const e = parseCall("");
 assert.deepEqual(e, { callerName: "", location: "", problem: "", category: "OTRO" });
 
-console.log("OK parser: 5 casos");
+// 6) Multilínea: un campo por línea, en orden problema/nombre/lugar.
+const f = parseCall("problema con impresora hp\n\npaulina contreras\n\nen pabellon box 10");
+assert.ok(f.callerName.toLowerCase().includes("paulina"), `nombre: ${f.callerName}`);
+assert.ok(f.location.toLowerCase().includes("pabellon"), `lugar: ${f.location}`);
+assert.ok(f.problem.toLowerCase().includes("impresora"), `problema: ${f.problem}`);
+assert.ok(!f.problem.toLowerCase().includes("paulina"), `problema no debe tragar el nombre: ${f.problem}`);
+assert.equal(f.category, "IMPRESORAS");
+
+console.log("OK parser: 6 casos");

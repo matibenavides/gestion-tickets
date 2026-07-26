@@ -6,13 +6,6 @@ export interface TicketMessageData {
   time?: string; // HH:mm; si se omite se usa la hora actual
 }
 
-function hhmm(): string {
-  return new Date().toLocaleTimeString("es-CL", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 /** Folio legible: #0001, #0042, ... */
 export function formatFolio(n?: number): string {
   return n ? `#${String(n).padStart(4, "0")}` : "#—";

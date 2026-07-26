@@ -265,6 +265,7 @@ export default function TicketTable({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             allowClear
+            spellCheck={true}
             style={{ width: 260 }}
           />
           <Select
@@ -321,13 +322,13 @@ export default function TicketTable({
       >
         <Form form={form} layout="vertical">
           <Form.Item name="callerName" label="Solicitante">
-            <Input />
+            <Input spellCheck={true} autoCorrect="on" autoCapitalize="words" />
           </Form.Item>
           <Form.Item name="location" label="Ubicación">
-            <Input />
+            <Input spellCheck={true} autoCorrect="on" autoCapitalize="sentences" />
           </Form.Item>
           <Form.Item name="problem" label="Requerimiento">
-            <Input.TextArea autoSize={{ minRows: 2, maxRows: 5 }} />
+            <Input.TextArea autoSize={{ minRows: 2, maxRows: 5 }} spellCheck={true} autoCorrect="on" autoCapitalize="sentences" />
           </Form.Item>
           <Form.Item name="category" label="Categoría">
             <Select options={CATEGORY_ORDER.map((c) => ({ value: c, label: CATEGORY_LABELS[c] }))} />

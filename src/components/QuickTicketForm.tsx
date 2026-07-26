@@ -138,6 +138,9 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
             onChange={(e) => setRaw(e.target.value)}
             placeholder={'Ej: "Paola de oncología sala de quimio box 10 solicita cambio de teléfono"'}
             autoSize={{ minRows: 8, maxRows: 16 }}
+            spellCheck={true}
+            autoCorrect="on"
+            autoCapitalize="sentences"
             style={{ marginTop: 8, fontSize: 15 }}
           />
           <Space.Compact block style={{ marginTop: 12 }}>
@@ -155,15 +158,37 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
           <Space orientation="vertical" size="small" style={{ width: "100%", marginTop: 8 }}>
             <div>
               <Text strong>Solicitante</Text>
-              <Input value={callerName} onChange={(e) => setCallerName(e.target.value)} placeholder="Nombre de quien llama" />
+              <Input
+                value={callerName}
+                onChange={(e) => setCallerName(e.target.value)}
+                placeholder="Nombre de quien llama"
+                spellCheck={true}
+                autoCorrect="on"
+                autoCapitalize="words"
+              />
             </div>
             <div>
               <Text strong>Ubicación / Zona / Piso / Box</Text>
-              <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Ej: Oncología, sala de quimio, box 10" />
+              <Input
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Ej: Oncología, sala de quimio, box 10"
+                spellCheck={true}
+                autoCorrect="on"
+                autoCapitalize="sentences"
+              />
             </div>
             <div>
               <Text strong>Requerimiento / Problema</Text>
-              <TextArea value={problem} onChange={(e) => setProblem(e.target.value)} autoSize={{ minRows: 2, maxRows: 5 }} placeholder="Descripción del problema" />
+              <TextArea
+                value={problem}
+                onChange={(e) => setProblem(e.target.value)}
+                autoSize={{ minRows: 2, maxRows: 5 }}
+                placeholder="Descripción del problema"
+                spellCheck={true}
+                autoCorrect="on"
+                autoCapitalize="sentences"
+              />
             </div>
             <Row gutter={12}>
               <Col span={12}>
