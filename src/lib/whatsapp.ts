@@ -1,5 +1,5 @@
 export interface TicketMessageData {
-  folio?: number; // Folio correlativo del ticket (autoincremental)
+  folio?: number | null; // Folio correlativo del ticket (autoincremental)
   callerName: string;
   location: string;
   problem: string;
@@ -14,7 +14,7 @@ function hhmm(): string {
 }
 
 /** Folio legible: #0001, #0042, ... */
-export function formatFolio(n?: number): string {
+export function formatFolio(n?: number | null): string {
   return n ? `#${String(n).padStart(4, "0")}` : "#—";
 }
 

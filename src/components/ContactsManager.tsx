@@ -136,13 +136,13 @@ export default function ContactsManager({ contacts }: { contacts: Contact[] }) {
       >
         <Form form={form} layout="vertical">
           <Form.Item name="name" label="Nombre" rules={[{ required: true, message: "El nombre es obligatorio" }]}>
-            <Input placeholder="Ej: Carlos Muñoz" />
+            <Input />
           </Form.Item>
           <Form.Item name="role" label="Rol">
-            <Input placeholder="Ej: Supervisor de Infraestructura" />
+            <Input />
           </Form.Item>
           <Form.Item name="zone" label="Zona / Área asignada">
-            <Input placeholder="Ej: Pabellón, Oncología, Administración" />
+            <Input />
           </Form.Item>
           <Form.Item
             name="whatsappNumber"

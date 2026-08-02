@@ -1,18 +1,21 @@
 "use client";
 
-import { App, Badge, Button, Card, Col, Divider, Input, Row, Select, Space, Tag, Typography } from "antd";
+import { App, Badge, Button, Card, Col, Divider, Flex, Input, Row, Select, Space, Tag, Typography } from "antd";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FaMagic, FaWhatsapp } from "react-icons/fa";
 import { MdSave, MdStickyNote2 } from "react-icons/md";
 import { createTicket } from "@/app/actions/tickets";
+import { createRawTag, listRawTags } from "@/app/actions/tags";
 import { parseCall } from "@/lib/parser";
 import { compactLine } from "@/lib/whatsapp";
 import {
   CATEGORY_COLORS,
   CATEGORY_LABELS,
   CATEGORY_ORDER,
+  DEFAULT_RAW_TAGS,
   type Contact,
+  type RawTag,
   type Ticket,
   type TicketCategory,
 } from "@/types";
@@ -27,14 +30,41 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
   const router = useRouter();
 
   const [raw, setRaw] = useState("");
+  const [rawTag, setRawTag] = useState<string>("");
   const [callerName, setCallerName] = useState("");
   const [location, setLocation] = useState("");
   const [problem, setProblem] = useState("");
   const [category, setCategory] = useState<TicketCategory>("OTRO");
   const [contactId, setContactId] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
-  const [modal, setModal] = useState<{ ticketId: string; folio: number; contact: Contact } | null>(null);
+  const [modal, setModal] = useState<{ ticketId: string; folio: number | null; contact: Contact } | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
+
+  const [availableTags, setAvailableTags] = useState<RawTag[]>(DEFAULT_RAW_TAGS);
+
+  useEffect(() => {
+    listRawTags()
+      .then((tags) => setAvailableTags(tags))
+      .catch(() => {});
+  }, []);
+
+  /** Elegir etiqueta arrastra su categoría padre: no se clasifica dos veces. */
+  function onTagPick(name?: string) {
+    const picked = name ?? "";
+    setRawTag(picked);
+    const parent = availableTags.find((t) => t.name === picked);
+    if (parent) setCategory(parent.category);
+  }
+
+  /** Registra la etiqueta en el catálogo si es nueva y devuelve el valor limpio. */
+  async function ensureTag(): Promise<string> {
+    const tagToSave = rawTag.trim();
+    if (tagToSave && !availableTags.some((t) => t.name === tagToSave)) {
+      const updated = await createRawTag(tagToSave, category);
+      setAvailableTags(updated);
+    }
+    return tagToSave;
+  }
 
   async function saveRawDraft() {
     if (!raw.trim()) {
@@ -43,8 +73,9 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
     }
     setSaving(true);
     try {
-      await createTicket({ callerName: "", location: "", problem: "", rawNote: raw, category: "OTRO", assignedContactId: null }, "DRAFT");
-      message.success("Borrador guardado sin formatear.");
+      const tagToSave = await ensureTag();
+      await createTicket({ callerName: "", location: "", problem: "", rawNote: raw, rawTag: tagToSave, category: "OTRO", assignedContactId: null }, "DRAFT");
+      message.success("Nota guardada sin formatear.");
       reset();
       router.refresh();
     } catch (e) {
@@ -69,6 +100,7 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
 
   function reset() {
     setRaw("");
+    setRawTag("");
     setCallerName("");
     setLocation("");
     setProblem("");
@@ -88,7 +120,8 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
     }
     setSaving(true);
     try {
-      await createTicket({ callerName, location, problem, rawNote: raw, category, assignedContactId: contactId ?? null }, "DRAFT");
+      const tagToSave = await ensureTag();
+      await createTicket({ callerName, location, problem, rawNote: raw, rawTag: tagToSave, category, assignedContactId: contactId ?? null }, "DRAFT");
       message.success("Borrador guardado.");
       reset();
       router.refresh();
@@ -110,7 +143,8 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
     }
     setSaving(true);
     try {
-      const row = await createTicket({ callerName, location, problem, rawNote: raw, category, assignedContactId: contactId }, "DRAFT");
+      const tagToSave = await ensureTag();
+      const row = await createTicket({ callerName, location, problem, rawNote: raw, rawTag: tagToSave, category, assignedContactId: contactId }, "DRAFT");
       const contact = contacts.find((c) => c.id === contactId)!;
       setModal({ ticketId: row.id, folio: row.ticketNumber, contact });
     } catch (e) {
@@ -136,13 +170,35 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
           <TextArea
             value={raw}
             onChange={(e) => setRaw(e.target.value)}
-            placeholder={'Ej: "Paola de oncología sala de quimio box 10 solicita cambio de teléfono"'}
+            placeholder="Escribe la nota de la llamada..."
             autoSize={{ minRows: 8, maxRows: 16 }}
             style={{ marginTop: 8, fontSize: 15 }}
           />
-          <Space.Compact block style={{ marginTop: 12 }}>
+          <Flex gap={8} style={{ marginTop: 8 }} align="center">
+            <Select
+              placeholder="🏷️ Etiqueta (opcional)"
+              value={rawTag || undefined}
+              onChange={onTagPick}
+              allowClear
+              showSearch
+              optionFilterProp="value"
+              style={{ width: "100%" }}
+              options={availableTags.map((t) => ({
+                value: t.name,
+                label: (
+                  <Space size={4}>
+                    <Tag color={CATEGORY_COLORS[t.category]} style={{ marginInlineEnd: 0 }}>
+                      {CATEGORY_LABELS[t.category]}
+                    </Tag>
+                    <span>{t.name}</span>
+                  </Space>
+                ),
+              }))}
+            />
+          </Flex>
+          <Space.Compact block style={{ marginTop: 8 }}>
             <Button icon={<MdSave />} loading={saving} onClick={saveRawDraft}>
-              Guardar borrador
+              Almacenar Nota
             </Button>
             <Button type="primary" icon={<FaMagic />} onClick={handleParse} block>
               Clasificar / Formatear
@@ -151,15 +207,14 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
         </Col>
 
         <Col xs={24} md={13}>
-          <Text type="secondary">Campos (edítalos si es necesario):</Text>
-          <Space orientation="vertical" size="small" style={{ width: "100%", marginTop: 8 }}>
+          <Space orientation="vertical" size="small" style={{ width: "100%" }}>
             <div>
               <Text strong>Solicitante</Text>
               <Input value={callerName} onChange={(e) => setCallerName(e.target.value)} placeholder="Nombre de quien llama" />
             </div>
             <div>
               <Text strong>Ubicación / Zona / Piso / Box</Text>
-              <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Ej: Oncología, sala de quimio, box 10" />
+              <Input value={location} onChange={(e) => setLocation(e.target.value)} />
             </div>
             <div>
               <Text strong>Requerimiento / Problema</Text>
@@ -167,7 +222,10 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
             </div>
             <Row gutter={12}>
               <Col span={12}>
-                <Text strong>Categoría</Text>
+                <Text strong>Categoría</Text>{" "}
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  (según etiqueta)
+                </Text>
                 <Select
                   value={category}
                   onChange={setCategory}
@@ -220,7 +278,17 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
         </Col>
       </Row>
 
-      <RawDraftsList drafts={rawDrafts} open={notesOpen} onClose={() => setNotesOpen(false)} />
+      <RawDraftsList
+        drafts={rawDrafts}
+        open={notesOpen}
+        serverTags={availableTags}
+        onClose={() => setNotesOpen(false)}
+        onSelectDraft={(noteText) => {
+          setRaw(noteText);
+          setNotesOpen(false);
+          message.info("Nota cargada en el bloc.");
+        }}
+      />
 
       <WhatsAppModal
         open={!!modal}
