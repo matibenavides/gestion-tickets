@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
   // Estas libs usan APIs nativas de Node y no deben empaquetarse en el bundle del servidor.
   serverExternalPackages: ["postgres", "ioredis"],
   allowedDevOrigins: ["192.168.0.100"],

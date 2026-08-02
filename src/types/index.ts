@@ -27,11 +27,12 @@ export interface Contact {
 
 export interface Ticket {
   id: string;
-  ticketNumber: number;
+  ticketNumber: number | null;
   callerName: string;
   location: string;
   problem: string;
   rawNote: string;
+  rawTag: string;
   category: TicketCategory;
   status: TicketStatus;
   assignedContactId: string | null;
@@ -39,6 +40,22 @@ export interface Ticket {
   createdAt: Date;
   updatedAt: Date;
 }
+
+/** Etiqueta = clasificación específica editable por el usuario. Su `category`
+ *  es la agrupación gruesa que hereda el ticket (alimenta métricas y colores). */
+export interface RawTag {
+  name: string;
+  category: TicketCategory;
+}
+
+export const DEFAULT_RAW_TAGS: RawTag[] = [
+  { name: "Desbloqueo Cuenta", category: "CUENTAS" },
+  { name: "Acceso / Clave", category: "CUENTAS" },
+  { name: "Consulta Sistema", category: "OTRO" },
+  { name: "Información", category: "OTRO" },
+  { name: "Soporte Rápido", category: "OTRO" },
+  { name: "General", category: "OTRO" },
+];
 
 export const STATUS_LABELS: Record<TicketStatus, string> = {
   DRAFT: "Borrador",
