@@ -1,6 +1,6 @@
 "use server";
 
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { contacts, rawTags, tickets } from "@/db/schema";
@@ -22,6 +22,24 @@ export interface TicketInput {
   rawTag?: string;
   category: TicketCategory;
   assignedContactId?: string | null;
+}
+
+/** Siguiente valor de la secuencia de folios. */
+const NEXT_FOLIO = sql`nextval('tickets_ticket_number_seq')::integer`;
+
+/**
+ * Reserva el folio recién cuando el ticket sale: los borradores no consumen
+ * numeración, así borrar uno no deja huecos en la serie. Si ya tenía folio lo
+ * respeta (reenviar no lo renumera).
+ */
+async function ensureFolio(id: string, current: number | null): Promise<number | null> {
+  if (current !== null) return current;
+  const [row] = await db
+    .update(tickets)
+    .set({ ticketNumber: NEXT_FOLIO })
+    .where(and(eq(tickets.id, id), isNull(tickets.ticketNumber)))
+    .returning({ ticketNumber: tickets.ticketNumber });
+  return row?.ticketNumber ?? null;
 }
 
 function clean(input: TicketInput) {
@@ -53,7 +71,7 @@ export async function createTicket(input: TicketInput, status: TicketStatus = "D
     .values({
       ...cleaned,
       rawNote,
-      ticketNumber: rawDraft ? null : sql`nextval('tickets_ticket_number_seq')::integer`,
+      ticketNumber: status === "SENT" && !rawDraft ? NEXT_FOLIO : null,
       status,
       sentAt: status === "SENT" ? new Date() : null,
     })
@@ -68,13 +86,14 @@ export async function updateTicket(id: string, input: TicketInput) {
   const rawNote = input.rawNote ?? current?.rawNote ?? "";
   const rawDraft = isRawDraft({ ...cleaned, rawNote });
 
-  const assignFolio = current && current.ticketNumber === null && !rawDraft;
+  // Un ticket ya enviado al que le falta el folio (dato antiguo) lo recibe aquí;
+  // un borrador no, porque su folio se reserva al enviarlo.
+  if (current && current.status !== "DRAFT" && !rawDraft) await ensureFolio(id, current.ticketNumber);
 
   const [row] = await db
     .update(tickets)
     .set({
       ...cleaned,
-      ...(assignFolio ? { ticketNumber: sql`nextval('tickets_ticket_number_seq')::integer` } : {}),
       updatedAt: new Date(),
     })
     .where(eq(tickets.id, id))
@@ -84,6 +103,12 @@ export async function updateTicket(id: string, input: TicketInput) {
 }
 
 export async function setTicketStatus(id: string, status: TicketStatus) {
+  // Al salir de borrador el ticket pasa a existir para el resto: ahí toma folio.
+  if (status !== "DRAFT") {
+    const [current] = await db.select().from(tickets).where(eq(tickets.id, id));
+    await ensureFolio(id, current?.ticketNumber ?? null);
+  }
+
   const [row] = await db
     .update(tickets)
     .set({ status, updatedAt: new Date(), ...(status === "SENT" ? { sentAt: new Date() } : {}) })
@@ -108,7 +133,7 @@ export async function markTicketSent(id: string) {
   const [current] = await db.select().from(tickets).where(eq(tickets.id, id));
   const keep = current && ["IN_PROGRESS", "RESOLVED", "CANCELLED"].includes(current.status);
   const nextStatus: TicketStatus = keep ? current.status : "SENT";
-  const needsFolio = current && current.ticketNumber === null;
+  await ensureFolio(id, current?.ticketNumber ?? null);
 
   const [row] = await db
     .update(tickets)
@@ -116,7 +141,6 @@ export async function markTicketSent(id: string) {
       status: nextStatus,
       sentAt: new Date(),
       updatedAt: new Date(),
-      ...(needsFolio ? { ticketNumber: sql`nextval('tickets_ticket_number_seq')::integer` } : {}),
     })
     .where(eq(tickets.id, id))
     .returning();
@@ -140,19 +164,23 @@ export async function sendTicketWhatsApp(id: string) {
     .where(eq(contacts.id, ticket.assignedContactId));
   if (!contact) throw new Error("El contacto asignado ya no existe.");
 
+  // El folio se asigna antes de armar el mensaje: si el ticket venía de borrador
+  // todavía no tenía número.
+  const folio = await ensureFolio(ticket.id, ticket.ticketNumber);
+
   const templateId = process.env.ZAVU_WHATSAPP_TEMPLATE_ID;
   if (templateId) {
     // ponytail: la plantilla en Zavu debe tener 4 variables en ESTE orden:
     // {{1}} folio · {{2}} solicitante · {{3}} ubicación · {{4}} requerimiento.
     await sendZavuTemplate(contact.whatsappNumber, templateId, {
-      "1": formatFolio(ticket.ticketNumber),
+      "1": formatFolio(folio),
       "2": ticket.callerName || "-",
       "3": ticket.location || "-",
       "4": ticket.problem || "-",
     });
   } else {
     const text = formatWhatsAppMessage({
-      folio: ticket.ticketNumber,
+      folio,
       callerName: ticket.callerName,
       location: ticket.location,
       problem: ticket.problem,

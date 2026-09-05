@@ -13,8 +13,7 @@
     "db:seed": "tsx src/db/seed.ts",
     "db:setup": "drizzle-kit push && tsx src/db/seed.ts",
     "db:studio": "drizzle-kit studio",
-    "test": "tsx src/lib/parser.test.ts && tsx src/lib/stats.test.ts && tsx src/lib/whatsapp.test.ts",
-    "test:parser": "tsx src/lib/parser.test.ts",
+    "test": "tsx src/lib/stats.test.ts && tsx src/lib/whatsapp.test.ts",
     "test:stats": "tsx src/lib/stats.test.ts",
     "test:whatsapp": "tsx src/lib/whatsapp.test.ts"
   },

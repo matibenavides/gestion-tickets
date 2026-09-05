@@ -36,16 +36,22 @@ export default function WhatsAppModal({
   const [sendingZavu, setSendingZavu] = useState(false);
   const msg = formatWhatsAppMessage(data);
 
-  function openChannel(kind: "web" | "app") {
+  function openChannel(kind: "web" | "app", text: string, tab: Window | null) {
     if (kind === "app") {
       // Protocolo whatsapp:// → abre la app instalada sin salir de la página actual.
       const a = document.createElement("a");
-      a.href = buildWhatsAppAppUrl(contact!.whatsappNumber, msg);
+      a.href = buildWhatsAppAppUrl(contact!.whatsappNumber, text);
       document.body.appendChild(a);
       a.click();
       a.remove();
+      return;
+    }
+    const url = buildWhatsAppUrl(contact!.whatsappNumber, text);
+    if (tab) {
+      tab.opener = null;
+      tab.location.replace(url);
     } else {
-      window.open(buildWhatsAppUrl(contact!.whatsappNumber, msg), "_blank", "noopener,noreferrer");
+      window.open(url, "_blank", "noopener,noreferrer");
     }
   }
 
@@ -77,13 +83,18 @@ export default function WhatsAppModal({
       message.warning("No hay contacto asignado.");
       return;
     }
-    openChannel(kind);
+    // La pestaña se abre dentro del clic (si se espera al await, el bloqueador de
+    // ventanas emergentes la descarta) y recibe la URL cuando ya hay folio.
+    const tab = kind === "web" ? window.open("", "_blank") : null;
     setSending(true);
     try {
-      if (ticketId) await markTicketSent(ticketId);
+      const row = ticketId ? await markTicketSent(ticketId) : null;
+      openChannel(kind, formatWhatsAppMessage({ ...data, folio: row?.ticketNumber ?? data.folio }), tab);
       message.success("Ticket marcado como enviado.");
       onSent?.();
     } catch {
+      // Aunque falle el registro, el mensaje se abre igual para no perder el envío.
+      openChannel(kind, msg, tab);
       message.error("Se abrió WhatsApp, pero no se pudo marcar como enviado.");
     } finally {
       setSending(false);
@@ -108,6 +119,11 @@ export default function WhatsAppModal({
       >
         {msg}
       </Paragraph>
+      {!data.folio && (
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          El folio se asigna al enviar: los borradores no consumen numeración.
+        </Text>
+      )}
       <Text type="secondary" style={{ fontSize: 12 }}>Forma compacta:</Text>
       <br />
       <Text code copyable={{ text: compactLine(data) }}>

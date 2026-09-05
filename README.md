@@ -132,7 +132,7 @@ que todos apunten mediante la variable `DATABASE_URL`.
 | `npm run db:generate` / `db:migrate` | Genera y aplica migraciones versionadas |
 | `npm run db:seed` | Inserta contactos de ejemplo (si la tabla está vacía) |
 | `npm run db:studio` | Abre Drizzle Studio (explorador visual de la base de datos) |
-| `npm test` | Ejecuta las verificaciones del parser, las estadísticas y los enlaces de WhatsApp |
+| `npm test` | Ejecuta las verificaciones de las estadísticas y los enlaces de WhatsApp |
 
 ## Variables de entorno
 
@@ -140,7 +140,7 @@ El archivo `.env` en la raíz define la conexión a los servicios. Su contenido
 (disponible en `.env.example`) es:
 
 ```
-DATABASE_URL=postgres://tickets:tickets@localhost:5432/tickets
+DATABASE_URL=postgres://tickets:tickets@localhost:5434/tickets
 REDIS_URL=redis://localhost:6379
 ```
 
@@ -174,7 +174,7 @@ src/
 │   └── actions/            Server Actions (CRUD de tickets y contactos)
 ├── components/             Interfaz (Ant Design): QuickTicketForm, TicketTable, etc.
 ├── db/                     schema.ts, index.ts (postgres + drizzle), seed, migrate
-├── lib/                    parser, whatsapp, redis, stats (con verificaciones)
+├── lib/                    whatsapp, zavu, redis, stats (con verificaciones)
 └── types/                  Tipos y etiquetas compartidas
 ```
 
@@ -185,9 +185,12 @@ src/
   ejecución.
 - **"Docker Desktop is unable to start" en Windows.** Falta WSL2: ejecutar
   `wsl --install` en PowerShell como administrador y reiniciar el equipo.
-- **El puerto 5432 está en uso.** Existe otra instancia de PostgreSQL en
-  ejecución. Modificar el mapeo de puertos en `docker-compose.yml` (por ejemplo,
-  `"5433:5432"`) y actualizar el puerto en `DATABASE_URL`.
+- **Error `28P01 password authentication failed for user "tickets"`.** Hay otra
+  instancia de PostgreSQL ocupando el puerto del contenedor (en Windows ambos
+  procesos logran escuchar el mismo puerto y las conexiones caen en la instancia
+  equivocada). Por eso el contenedor se publica en el `5434`; si ese puerto
+  también se ocupa, cambiar el mapeo en `docker-compose.yml` y el puerto en
+  `DATABASE_URL`.
 - **La aplicación carga pero no muestra datos.** Verificar que se haya ejecutado
   `npm run db:setup` y que los contenedores estén activos (`docker compose up -d`).
 
@@ -200,8 +203,8 @@ omite de forma transparente.
 
 ## Notas técnicas
 
-- La clasificación automática se basa en reglas heurísticas (sin IA). El módulo
-  `src/lib/parser.ts` está aislado para permitir la integración de un servicio de
-  IA en el futuro sin afectar al resto de la aplicación.
+- El folio correlativo (`ticket_number`) se reserva recién al enviar el ticket:
+  los borradores no consumen numeración, de modo que borrar uno no deja huecos
+  en la serie.
 - Las páginas que consultan datos utilizan `export const dynamic = "force-dynamic"`
   para reflejar siempre el estado actual de la base de datos.
