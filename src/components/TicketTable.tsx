@@ -39,6 +39,7 @@ import {
   type TicketStatus,
 } from "@/types";
 import { formatFolio } from "@/lib/whatsapp";
+import useClientMounted from "./useClientMounted";
 import WhatsAppModal from "./WhatsAppModal";
 
 const { RangePicker } = DatePicker;
@@ -74,6 +75,7 @@ export default function TicketTable({
   const [range, setRange] = useState<[Dayjs, Dayjs] | null>(null);
 
   const [editing, setEditing] = useState<Ticket | null>(null);
+  const mounted = useClientMounted();
   const [resend, setResend] = useState<{ ticket: Ticket; contact: Contact | null } | null>(null);
 
   const contactById = useMemo(() => new Map(contacts.map((c) => [c.id, c])), [contacts]);
@@ -404,53 +406,57 @@ export default function TicketTable({
         />
       </div>
 
-      <Modal
-        open={!!editing}
-        title="Editar ticket"
-        onCancel={() => setEditing(null)}
-        onOk={saveEdit}
-        okText="Guardar"
-        cancelText="Cancelar"
-        forceRender
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item name="callerName" label="Solicitante">
-            <Input spellCheck={true} autoCorrect="on" autoCapitalize="words" />
-          </Form.Item>
-          <Form.Item name="location" label="Ubicación">
-            <Input spellCheck={true} autoCorrect="on" autoCapitalize="sentences" />
-          </Form.Item>
-          <Form.Item name="problem" label="Requerimiento">
-            <Input.TextArea autoSize={{ minRows: 2, maxRows: 5 }} spellCheck={true} autoCorrect="on" autoCapitalize="sentences" />
-          </Form.Item>
-          <Form.Item name="rawTag" label="Etiqueta">
-            <Select
-              allowClear
-              showSearch
-              optionFilterProp="value"
-              placeholder="Sin etiqueta"
-              onChange={(name?: string) => {
-                const parent = allAvailableTags.find((t) => t.name === name);
-                if (parent) form.setFieldValue("category", parent.category);
-              }}
-              options={allAvailableTags.map((t) => ({
-                value: t.name,
-                label: (
-                  <Tag color={CATEGORY_COLORS[t.category]} style={{ marginInlineEnd: 0 }}>
-                    {t.name}
-                  </Tag>
-                ),
-              }))}
-            />
-          </Form.Item>
-          <Form.Item name="category" label="Categoría" extra="Se completa sola al elegir la etiqueta.">
-            <Select options={CATEGORY_ORDER.map((c) => ({ value: c, label: CATEGORY_LABELS[c] }))} />
-          </Form.Item>
-          <Form.Item name="assignedContactId" label="Asignado a">
-            <Select allowClear showSearch optionFilterProp="label" options={editContactOptions} placeholder="Sin asignar" />
-          </Form.Item>
-        </Form>
-      </Modal>
+      {/* Con forceRender el portal del modal no existe en el HTML del servidor,
+          así que se monta recién en el cliente para no romper la hidratación. */}
+      {mounted && (
+        <Modal
+          open={!!editing}
+          title="Editar ticket"
+          onCancel={() => setEditing(null)}
+          onOk={saveEdit}
+          okText="Guardar"
+          cancelText="Cancelar"
+          forceRender
+        >
+          <Form form={form} layout="vertical">
+            <Form.Item name="callerName" label="Solicitante">
+              <Input spellCheck={true} autoCorrect="on" autoCapitalize="words" />
+            </Form.Item>
+            <Form.Item name="location" label="Ubicación">
+              <Input spellCheck={true} autoCorrect="on" autoCapitalize="sentences" />
+            </Form.Item>
+            <Form.Item name="problem" label="Requerimiento">
+              <Input.TextArea autoSize={{ minRows: 2, maxRows: 5 }} spellCheck={true} autoCorrect="on" autoCapitalize="sentences" />
+            </Form.Item>
+            <Form.Item name="rawTag" label="Etiqueta">
+              <Select
+                allowClear
+                showSearch
+                optionFilterProp="value"
+                placeholder="Sin etiqueta"
+                onChange={(name?: string) => {
+                  const parent = allAvailableTags.find((t) => t.name === name);
+                  if (parent) form.setFieldValue("category", parent.category);
+                }}
+                options={allAvailableTags.map((t) => ({
+                  value: t.name,
+                  label: (
+                    <Tag color={CATEGORY_COLORS[t.category]} style={{ marginInlineEnd: 0 }}>
+                      {t.name}
+                    </Tag>
+                  ),
+                }))}
+              />
+            </Form.Item>
+            <Form.Item name="category" label="Categoría" extra="Se completa sola al elegir la etiqueta.">
+              <Select options={CATEGORY_ORDER.map((c) => ({ value: c, label: CATEGORY_LABELS[c] }))} />
+            </Form.Item>
+            <Form.Item name="assignedContactId" label="Asignado a">
+              <Select allowClear showSearch optionFilterProp="label" options={editContactOptions} placeholder="Sin asignar" />
+            </Form.Item>
+          </Form>
+        </Modal>
+      )}
 
       <WhatsAppModal
         open={!!resend}

@@ -26,6 +26,7 @@ import {
   type ContactInput,
 } from "@/app/actions/contacts";
 import type { Contact } from "@/types";
+import useClientMounted from "./useClientMounted";
 
 const { Text } = Typography;
 
@@ -35,6 +36,7 @@ export default function ContactsManager({ contacts }: { contacts: Contact[] }) {
   const [form] = Form.useForm<ContactInput>();
   const [editing, setEditing] = useState<Contact | null>(null);
   const [open, setOpen] = useState(false);
+  const mounted = useClientMounted();
 
   // El modal se renderiza desde el arranque (forceRender): el formulario ya está
   // montado, así que aceptar valores acá no dispara el aviso de `useForm` suelto.
@@ -129,45 +131,49 @@ export default function ContactsManager({ contacts }: { contacts: Contact[] }) {
 
       <Table<Contact> rowKey="id" columns={columns} dataSource={contacts} pagination={{ pageSize: 10, hideOnSinglePage: true }} />
 
-      <Modal
-        open={open}
-        title={editing ? "Editar contacto" : "Nuevo contacto"}
-        onCancel={() => setOpen(false)}
-        onOk={save}
-        okText="Guardar"
-        cancelText="Cancelar"
-        forceRender
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item name="name" label="Nombre" rules={[{ required: true, message: "El nombre es obligatorio" }]}>
-            <Input placeholder="Ej: Carlos Muñoz" spellCheck={true} autoCorrect="on" autoCapitalize="words" />
-          </Form.Item>
-          <Form.Item name="role" label="Rol">
-            <Input placeholder="Ej: Supervisor de Infraestructura" spellCheck={true} autoCorrect="on" autoCapitalize="words" />
-          </Form.Item>
-          <Form.Item name="zone" label="Zona / Área asignada">
-            <Input placeholder="Ej: Pabellón, Oncología, Administración" spellCheck={true} autoCorrect="on" autoCapitalize="words" />
-          </Form.Item>
-          <Form.Item
-            name="whatsappNumber"
-            label="WhatsApp (con código de país)"
-            rules={[
-              { required: true, message: "El número es obligatorio" },
-              {
-                validator: (_, value) =>
-                  (value || "").replace(/\D/g, "").length >= 8
-                    ? Promise.resolve()
-                    : Promise.reject(new Error("Número inválido (ej: +56912345678)")),
-              },
-            ]}
-          >
-            <Input placeholder="+56912345678" />
-          </Form.Item>
-          <Form.Item name="isActive" label="Activo" valuePropName="checked">
-            <Switch />
-          </Form.Item>
-        </Form>
-      </Modal>
+      {/* Con forceRender el portal del modal no existe en el HTML del servidor,
+          así que se monta recién en el cliente para no romper la hidratación. */}
+      {mounted && (
+        <Modal
+          open={open}
+          title={editing ? "Editar contacto" : "Nuevo contacto"}
+          onCancel={() => setOpen(false)}
+          onOk={save}
+          okText="Guardar"
+          cancelText="Cancelar"
+          forceRender
+        >
+          <Form form={form} layout="vertical">
+            <Form.Item name="name" label="Nombre" rules={[{ required: true, message: "El nombre es obligatorio" }]}>
+              <Input placeholder="Ej: Carlos Muñoz" spellCheck={true} autoCorrect="on" autoCapitalize="words" />
+            </Form.Item>
+            <Form.Item name="role" label="Rol">
+              <Input placeholder="Ej: Supervisor de Infraestructura" spellCheck={true} autoCorrect="on" autoCapitalize="words" />
+            </Form.Item>
+            <Form.Item name="zone" label="Zona / Área asignada">
+              <Input placeholder="Ej: Pabellón, Oncología, Administración" spellCheck={true} autoCorrect="on" autoCapitalize="words" />
+            </Form.Item>
+            <Form.Item
+              name="whatsappNumber"
+              label="WhatsApp (con código de país)"
+              rules={[
+                { required: true, message: "El número es obligatorio" },
+                {
+                  validator: (_, value) =>
+                    (value || "").replace(/\D/g, "").length >= 8
+                      ? Promise.resolve()
+                      : Promise.reject(new Error("Número inválido (ej: +56912345678)")),
+                },
+              ]}
+            >
+              <Input placeholder="+56912345678" />
+            </Form.Item>
+            <Form.Item name="isActive" label="Activo" valuePropName="checked">
+              <Switch />
+            </Form.Item>
+          </Form>
+        </Modal>
+      )}
     </>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { HappyProvider } from "@ant-design/happy-work-theme";
-import { App, Badge, Button, Card, Col, Divider, Flex, Input, Row, Select, Space, Tag, Typography } from "antd";
+import { App, Badge, BorderBeam, Button, Card, Col, Divider, Flex, Input, Row, Select, Space, Tag, Typography } from "antd";
+import type { BorderBeamGradient } from "antd";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FaWhatsapp } from "react-icons/fa";
@@ -19,15 +20,32 @@ import {
   type Ticket,
   type TicketCategory,
 } from "@/types";
+import { useThemeMode } from "./AntdRegistry";
 import RawDraftsList from "./RawDraftsList";
 import WhatsAppModal from "./WhatsAppModal";
 
 const { TextArea } = Input;
 const { Text } = Typography;
 
+// Gradiente "Nebula" del catálogo de Ant Design. En modo oscuro se usa el tono
+// inmediatamente más claro de cada color: los originales se apagan sobre fondo negro.
+const NEBULA: Record<"light" | "dark", BorderBeamGradient> = {
+  light: [
+    { color: "#2f54eb", percent: 0 },
+    { color: "#722ed1", percent: 44 },
+    { color: "#ff85c0", percent: 100 },
+  ],
+  dark: [
+    { color: "#597ef7", percent: 0 },
+    { color: "#9254de", percent: 44 },
+    { color: "#ffadd2", percent: 100 },
+  ],
+};
+
 export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Contact[]; rawDrafts: Ticket[] }) {
   const { message } = App.useApp();
   const router = useRouter();
+  const { mode } = useThemeMode();
 
   const [raw, setRaw] = useState("");
   const [rawTag, setRawTag] = useState<string>("");
@@ -153,16 +171,22 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
       <Row gutter={[24, 16]}>
         <Col xs={24} md={11}>
           <Text type="secondary">Anota la llamada mientras hablas:</Text>
-          <TextArea
-            value={raw}
-            onChange={(e) => setRaw(e.target.value)}
-            placeholder="Escribe la nota de la llamada..."
-            autoSize={{ minRows: 8, maxRows: 16 }}
-            spellCheck={true}
-            autoCorrect="on"
-            autoCapitalize="sentences"
-            style={{ marginTop: 8, fontSize: 15 }}
-          />
+          {/* El haz se monta dentro del elemento que envuelve, y un <textarea> no
+              admite hijos: va sobre un contenedor posicionado del mismo tamaño. */}
+          <BorderBeam color={NEBULA[mode]}>
+            <div style={{ position: "relative", marginTop: 8, borderRadius: 8 }}>
+              <TextArea
+                value={raw}
+                onChange={(e) => setRaw(e.target.value)}
+                placeholder="Escribe la nota de la llamada..."
+                autoSize={{ minRows: 8, maxRows: 16 }}
+                spellCheck={true}
+                autoCorrect="on"
+                autoCapitalize="sentences"
+                style={{ fontSize: 15 }}
+              />
+            </div>
+          </BorderBeam>
           <Flex gap={8} style={{ marginTop: 8 }} align="center">
             <Select
               placeholder="🏷️ Etiqueta (opcional)"
