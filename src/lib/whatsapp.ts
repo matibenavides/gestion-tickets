@@ -1,9 +1,18 @@
 export interface TicketMessageData {
   folio?: number | null; // Folio correlativo del ticket (autoincremental)
+  createdAt?: Date | string | null; // Emisión del ticket
   callerName: string;
   location: string;
   problem: string;
-  time?: string; // HH:mm; si se omite se usa la hora actual
+}
+
+/** Emisión legible en hora local: 05/09/2026 15:04. */
+export function formatDateTime(value?: Date | string | null): string {
+  if (!value) return "";
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 /** Folio legible: #0001, #0042, ... */
@@ -13,9 +22,11 @@ export function formatFolio(n?: number | null): string {
 
 /** Mensaje con la nomenclatura estandarizada para el supervisor/técnico. */
 export function formatWhatsAppMessage(t: TicketMessageData): string {
+  const emitted = formatDateTime(t.createdAt);
   const lines = [
     "*NUEVO TICKET DE SOPORTE*",
     t.folio ? `*Folio:* ${formatFolio(t.folio)}` : null,
+    emitted ? `*Fecha:* ${emitted}` : null,
     `*Solicitante:* ${t.callerName?.trim() || "-"}`,
     `*Ubicación:* ${t.location?.trim() || "-"}`,
     `*Requerimiento:* ${t.problem?.trim() || "-"}`,

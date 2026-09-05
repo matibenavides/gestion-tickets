@@ -454,6 +454,7 @@ export default function TicketTable({
         ticketId={resend?.ticket.id}
         data={{
           folio: resend?.ticket.ticketNumber,
+          createdAt: resend?.ticket.createdAt,
           callerName: resend?.ticket.callerName ?? "",
           location: resend?.ticket.location ?? "",
           problem: resend?.ticket.problem ?? "",

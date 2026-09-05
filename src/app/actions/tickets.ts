@@ -181,6 +181,7 @@ export async function sendTicketWhatsApp(id: string) {
   } else {
     const text = formatWhatsAppMessage({
       folio,
+      createdAt: ticket.createdAt,
       callerName: ticket.callerName,
       location: ticket.location,
       problem: ticket.problem,
