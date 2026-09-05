@@ -144,7 +144,6 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
     <Card
       title={
         <Space>
-          <span>📝</span>
           <span>Bloc de Notas Inteligente</span>
         </Space>
       }
@@ -185,9 +184,16 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
               }))}
             />
           </Flex>
-          <Button icon={<MdSave />} loading={saving} onClick={saveRawDraft} block style={{ marginTop: 8 }}>
-            Almacenar Nota
-          </Button>
+          <Flex gap={8} style={{ marginTop: 8 }}>
+            <Button icon={<MdSave />} loading={saving} onClick={saveRawDraft} style={{ flex: 1 }}>
+              Almacenar Nota
+            </Button>
+            <Badge count={rawDrafts.length} size="small">
+              <Button icon={<MdStickyNote2 />} onClick={() => setNotesOpen(true)}>
+                Notas
+              </Button>
+            </Badge>
+          </Flex>
         </Col>
 
         <Col xs={24} md={13}>
@@ -272,11 +278,6 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
             <Button icon={<MdSave />} loading={saving} onClick={saveDraft}>
               Guardar borrador
             </Button>
-            <Badge count={rawDrafts.length} size="small">
-              <Button icon={<MdStickyNote2 />} onClick={() => setNotesOpen(true)}>
-                Notas
-              </Button>
-            </Badge>
             <Button type="primary" icon={<FaWhatsapp />} loading={saving} onClick={sendWhatsApp}>
               Enviar por WhatsApp
             </Button>
