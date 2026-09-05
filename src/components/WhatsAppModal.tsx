@@ -85,7 +85,7 @@ export default function WhatsAppModal({
       <Paragraph
         style={{
           whiteSpace: "pre-wrap",
-          background: "#f5f5f5",
+          background: "var(--ant-color-fill-quaternary)",
           padding: 12,
           borderRadius: 8,
           marginTop: 12,

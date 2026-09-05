@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, Col, Empty, Row } from "antd";
+import { Card, Col, Empty, Row, theme } from "antd";
 import {
   Bar,
   BarChart,
@@ -30,6 +30,19 @@ const ZONE_COLOR = "#2563eb";
 
 export default function AnalyticsCharts({ stats }: { stats: Stats }) {
   const categoryData = stats.byCategory.filter((c) => c.count > 0);
+  // Recharts no lee los tokens de Ant Design: rejilla, ejes y tooltip se pintan
+  // a mano para que sigan al modo claro/oscuro.
+  const { token } = theme.useToken();
+  const axisTick = { fill: token.colorTextSecondary };
+  const tooltipProps = {
+    contentStyle: {
+      background: token.colorBgElevated,
+      border: `1px solid ${token.colorBorderSecondary}`,
+      borderRadius: token.borderRadius,
+    },
+    labelStyle: { color: token.colorText },
+    cursor: { fill: token.colorFillSecondary },
+  };
 
   return (
     <Row gutter={[16, 16]}>
@@ -37,10 +50,10 @@ export default function AnalyticsCharts({ stats }: { stats: Stats }) {
         <Card title="Tickets creados por día (últimos 14 días)" variant="borderless">
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={stats.perDay} margin={{ top: 8, right: 16, bottom: 0, left: -16 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-              <XAxis dataKey="label" fontSize={12} />
-              <YAxis allowDecimals={false} fontSize={12} />
-              <Tooltip />
+              <CartesianGrid strokeDasharray="3 3" stroke={token.colorSplit} />
+              <XAxis dataKey="label" fontSize={12} tick={axisTick} />
+              <YAxis allowDecimals={false} fontSize={12} tick={axisTick} />
+              <Tooltip {...tooltipProps} />
               <Line type="monotone" dataKey="count" name="Tickets" stroke="#2563eb" strokeWidth={2} dot={{ r: 2 }} />
             </LineChart>
           </ResponsiveContainer>
@@ -67,7 +80,7 @@ export default function AnalyticsCharts({ stats }: { stats: Stats }) {
                     <Cell key={c.label} fill={CATEGORY_HEX[c.label] ?? "#8c8c8c"} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip {...tooltipProps} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -82,10 +95,10 @@ export default function AnalyticsCharts({ stats }: { stats: Stats }) {
           ) : (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={stats.topZones} layout="vertical" margin={{ left: 24, right: 16 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis type="number" allowDecimals={false} fontSize={12} />
-                <YAxis type="category" dataKey="zone" width={120} fontSize={11} />
-                <Tooltip />
+                <CartesianGrid strokeDasharray="3 3" stroke={token.colorSplit} />
+                <XAxis type="number" allowDecimals={false} fontSize={12} tick={axisTick} />
+                <YAxis type="category" dataKey="zone" width={120} fontSize={11} tick={axisTick} />
+                <Tooltip {...tooltipProps} />
                 <Bar dataKey="count" name="Tickets" fill={ZONE_COLOR} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -97,10 +110,10 @@ export default function AnalyticsCharts({ stats }: { stats: Stats }) {
         <Card title="Tickets por estado" variant="borderless">
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={stats.byStatus} margin={{ top: 8, right: 16, left: -16 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-              <XAxis dataKey="label" fontSize={11} interval={0} angle={-15} textAnchor="end" height={60} />
-              <YAxis allowDecimals={false} fontSize={12} />
-              <Tooltip />
+              <CartesianGrid strokeDasharray="3 3" stroke={token.colorSplit} />
+              <XAxis dataKey="label" fontSize={11} interval={0} angle={-15} textAnchor="end" height={60} tick={axisTick} />
+              <YAxis allowDecimals={false} fontSize={12} tick={axisTick} />
+              <Tooltip {...tooltipProps} />
               <Bar dataKey="count" name="Tickets" fill="#13c2c2" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

@@ -41,13 +41,13 @@ export default function StatCards({ stats }: { stats: Stats }) {
             size="small"
             style={{
               borderRadius: 10,
-              border: "1px solid #e2e8f0",
+              border: "1px solid var(--ant-color-border-secondary)",
               boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
-              background: "#ffffff",
+              background: "var(--ant-color-bg-container)",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-              <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>{c.title}</span>
+              <span style={{ fontSize: 12, color: "var(--ant-color-text-secondary)", fontWeight: 600 }}>{c.title}</span>
               <div style={{ marginLeft: "auto" }}>{statusIcons[c.title]}</div>
             </div>
             <Statistic

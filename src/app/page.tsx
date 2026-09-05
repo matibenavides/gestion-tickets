@@ -25,7 +25,7 @@ export default async function DashboardPage() {
       <StatCards stats={stats} />
       <section>
         <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 12px" }}>Últimos tickets</h2>
-        <div style={{ background: "#fff", borderRadius: 8, padding: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
+        <div style={{ background: "var(--ant-color-bg-container)", borderRadius: 8, padding: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
           <TicketTable tickets={recent} contacts={allContacts} showFilters={false} />
         </div>
       </section>

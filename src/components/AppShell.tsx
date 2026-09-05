@@ -1,11 +1,12 @@
 "use client";
 
-import { Layout, Menu, Typography } from "antd";
+import { Button, Layout, Menu, Tooltip, Typography, theme } from "antd";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { MdBarChart, MdContacts, MdDashboard } from "react-icons/md";
+import { MdBarChart, MdContacts, MdDarkMode, MdDashboard, MdLightMode } from "react-icons/md";
 import { HiTicket } from "react-icons/hi2";
+import { useThemeMode } from "./AntdRegistry";
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -20,6 +21,8 @@ const items = [
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const { mode, toggle } = useThemeMode();
+  const { token } = theme.useToken();
 
   const selectedKey =
     items
@@ -28,7 +31,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       .sort((a, b) => b.length - a.length)[0] ?? "/";
 
   return (
-    <Layout style={{ minHeight: "100vh", background: "#f8fafc" }}>
+    <Layout style={{ minHeight: "100vh", background: token.colorBgLayout }}>
       <Sider
         collapsible
         collapsed={collapsed}
@@ -37,7 +40,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         collapsedWidth={0}
         theme="light"
         style={{
-          borderRight: "1px solid #e2e8f0",
+          borderRight: `1px solid ${token.colorBorderSecondary}`,
           boxShadow: "2px 0 10px rgba(0,0,0,0.015)",
         }}
       >
@@ -49,7 +52,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             height: 56,
             padding: "0 16px",
             fontWeight: 700,
-            color: "#2563eb",
+            color: token.colorPrimary,
             fontSize: 16,
           }}
         >
@@ -58,6 +61,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
         <Menu
           mode="inline"
+          theme="light"
           selectedKeys={[selectedKey]}
           items={items}
           style={{
@@ -67,20 +71,30 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           }}
         />
       </Sider>
-      <Layout style={{ background: "#f8fafc" }}>
+      <Layout style={{ background: token.colorBgLayout }}>
         <Header
           style={{
-            background: "#ffffff",
+            background: token.colorBgContainer,
             padding: "0 24px",
-            borderBottom: "1px solid #e2e8f0",
+            borderBottom: `1px solid ${token.colorBorderSecondary}`,
             display: "flex",
             alignItems: "center",
             height: 56,
           }}
         >
-          <Title level={4} style={{ margin: 0, color: "#0f172a", fontWeight: 600, fontSize: 17 }}>
+          <Title level={4} style={{ margin: 0, color: token.colorText, fontWeight: 600, fontSize: 17 }}>
             Tickets de Soporte
           </Title>
+          <Tooltip title={mode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}>
+            <Button
+              type="text"
+              shape="circle"
+              aria-label="Cambiar entre modo claro y oscuro"
+              icon={mode === "dark" ? <MdLightMode size={18} /> : <MdDarkMode size={18} />}
+              onClick={toggle}
+              style={{ marginInlineStart: "auto" }}
+            />
+          </Tooltip>
         </Header>
         <Content style={{ padding: "24px 28px", maxWidth: 1480, margin: "0 auto", width: "100%" }}>
           {children}

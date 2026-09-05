@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AntdProvider from "@/components/AntdRegistry";
@@ -12,11 +13,15 @@ export const metadata: Metadata = {
   description: "Gestión y despacho rápido de tickets de soporte con envío por WhatsApp.",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // El tema llega en cookie para que el HTML del servidor ya venga en el modo
+  // elegido y no haya parpadeo claro → oscuro al hidratar.
+  const mode = (await cookies()).get("tickets-theme")?.value === "dark" ? "dark" : "light";
+
   return (
-    <html lang="es" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="es" className={`${geistSans.variable} ${geistMono.variable}`} style={{ colorScheme: mode }}>
       <body>
-        <AntdProvider>
+        <AntdProvider initialMode={mode}>
           <AppShell>{children}</AppShell>
         </AntdProvider>
       </body>

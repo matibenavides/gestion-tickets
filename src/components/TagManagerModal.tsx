@@ -132,7 +132,7 @@ export default function TagManagerModal({
                   justify="space-between"
                   align="center"
                   gap={8}
-                  style={{ padding: "6px 10px", background: "#fafafa", borderRadius: 6, border: "1px solid #f0f0f0" }}
+                  style={{ padding: "6px 10px", background: "var(--ant-color-fill-quaternary)", borderRadius: 6, border: "1px solid var(--ant-color-border-secondary)" }}
                 >
                   <Tag color={CATEGORY_COLORS[tag.category]} style={{ fontSize: 13, padding: "2px 8px", marginInlineEnd: 0 }}>
                     {tag.name}
