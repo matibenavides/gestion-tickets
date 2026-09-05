@@ -5,14 +5,7 @@ import { App as AntdApp, ConfigProvider, theme } from "antd";
 import esES from "antd/locale/es_ES";
 import "dayjs/locale/es";
 import { createContext, useContext, useEffect, useMemo, useSyncExternalStore } from "react";
-
-const themeConfig = {
-  token: {
-    colorPrimary: "#2563eb",
-    borderRadius: 8,
-    fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
-  },
-};
+import { flushSync } from "react-dom";
 
 export type ThemeMode = "light" | "dark";
 
@@ -57,9 +50,33 @@ function getMode(): ThemeMode {
 }
 
 function setMode(next: ThemeMode) {
-  currentMode = next;
-  document.cookie = `${COOKIE_NAME}=${next}; path=/; max-age=${ONE_YEAR}; samesite=lax`;
-  listeners.forEach((notify) => notify());
+  const aplicar = () => {
+    currentMode = next;
+    document.cookie = `${COOKIE_NAME}=${next}; path=/; max-age=${ONE_YEAR}; samesite=lax`;
+    listeners.forEach((notify) => notify());
+  };
+
+  // Cambiar de tema obliga a Ant Design a recalcular los tokens y a re-renderizar
+  // todo el árbol: son unos cuantos fotogramas con la interfaz congelada a medio
+  // camino. Con la transición de vista el navegador congela el fotograma anterior
+  // y funde al nuevo, así el salto se ve como un cambio y no como un tirón.
+  const sinAnimacion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (
+    sinAnimacion ||
+    document.visibilityState !== "visible" ||
+    typeof document.startViewTransition !== "function"
+  ) {
+    aplicar();
+    return;
+  }
+
+  const transicion = document.startViewTransition(() => flushSync(aplicar));
+  // Si el navegador aborta la transición (otra en curso, pestaña que se oculta),
+  // el tema ya quedó aplicado: solo hay que absorber el rechazo de las promesas.
+  const ignorar = () => {};
+  transicion.ready.catch(ignorar);
+  transicion.finished.catch(ignorar);
+  transicion.updateCallbackDone.catch(ignorar);
 }
 
 export default function AntdProvider({
@@ -70,6 +87,18 @@ export default function AntdProvider({
   initialMode?: ThemeMode;
 }) {
   const mode = useSyncExternalStore(subscribe, getMode, () => initialMode);
+
+  const themeConfig = useMemo(
+    () => ({
+      token: {
+        colorPrimary: "#2563eb",
+        borderRadius: 8,
+        fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
+      },
+      algorithm: mode === "dark" ? theme.darkAlgorithm : theme.defaultAlgorithm,
+    }),
+    [mode],
+  );
 
   // Para que las barras de scroll y los controles nativos acompañen al tema.
   useEffect(() => {
@@ -83,13 +112,7 @@ export default function AntdProvider({
 
   return (
     <AntdRegistry>
-      <ConfigProvider
-        theme={{
-          ...themeConfig,
-          algorithm: mode === "dark" ? theme.darkAlgorithm : theme.defaultAlgorithm,
-        }}
-        locale={esES}
-      >
+      <ConfigProvider theme={themeConfig} locale={esES}>
         <ThemeModeContext.Provider value={themeMode}>
           <AntdApp>{children}</AntdApp>
         </ThemeModeContext.Provider>

@@ -15,3 +15,10 @@ body {
   padding: 0;
   font-family: var(--font-sans);
 }
+
+/* Fundido del cambio de tema (ver setMode en AntdRegistry). Corto a propósito:
+   solo tiene que tapar el re-render de Ant Design, no lucirse. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+}
