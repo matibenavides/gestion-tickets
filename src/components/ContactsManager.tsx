@@ -36,14 +36,18 @@ export default function ContactsManager({ contacts }: { contacts: Contact[] }) {
   const [editing, setEditing] = useState<Contact | null>(null);
   const [open, setOpen] = useState(false);
 
+  // El modal se renderiza desde el arranque (forceRender): el formulario ya está
+  // montado, así que aceptar valores acá no dispara el aviso de `useForm` suelto.
   function openNew() {
     setEditing(null);
+    form.resetFields();
     form.setFieldsValue({ name: "", role: "", zone: "", whatsappNumber: "+56", isActive: true });
     setOpen(true);
   }
 
   function openEdit(c: Contact) {
     setEditing(c);
+    form.resetFields();
     form.setFieldsValue({ name: c.name, role: c.role, zone: c.zone, whatsappNumber: c.whatsappNumber, isActive: c.isActive });
     setOpen(true);
   }
@@ -132,7 +136,7 @@ export default function ContactsManager({ contacts }: { contacts: Contact[] }) {
         onOk={save}
         okText="Guardar"
         cancelText="Cancelar"
-        destroyOnHidden
+        forceRender
       >
         <Form form={form} layout="vertical">
           <Form.Item name="name" label="Nombre" rules={[{ required: true, message: "El nombre es obligatorio" }]}>

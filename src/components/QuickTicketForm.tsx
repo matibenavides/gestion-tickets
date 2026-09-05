@@ -1,5 +1,6 @@
 "use client";
 
+import { HappyProvider } from "@ant-design/happy-work-theme";
 import { App, Badge, Button, Card, Col, Divider, Flex, Input, Row, Select, Space, Tag, Typography } from "antd";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -189,9 +190,11 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
               Almacenar Nota
             </Button>
             <Badge count={rawDrafts.length} size="small">
-              <Button icon={<MdStickyNote2 />} onClick={() => setNotesOpen(true)}>
-                Notas
-              </Button>
+              <HappyProvider>
+                <Button icon={<MdStickyNote2 />} onClick={() => setNotesOpen(true)}>
+                  Notas
+                </Button>
+              </HappyProvider>
             </Badge>
           </Flex>
         </Col>
@@ -278,9 +281,11 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
             <Button icon={<MdSave />} loading={saving} onClick={saveDraft}>
               Guardar borrador
             </Button>
-            <Button type="primary" icon={<FaWhatsapp />} loading={saving} onClick={sendWhatsApp}>
-              Enviar por WhatsApp
-            </Button>
+            <HappyProvider>
+              <Button type="primary" icon={<FaWhatsapp />} loading={saving} onClick={sendWhatsApp}>
+                Enviar por WhatsApp
+              </Button>
+            </HappyProvider>
           </Space>
         </Col>
       </Row>

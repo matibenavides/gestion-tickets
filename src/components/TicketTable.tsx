@@ -171,6 +171,9 @@ export default function TicketTable({
 
   function openEdit(t: Ticket) {
     setEditing(t);
+    // El modal se renderiza desde el arranque (forceRender), así que el formulario
+    // ya está montado y acepta los valores antes de que la ventana se muestre.
+    form.resetFields();
     form.setFieldsValue({
       callerName: t.callerName,
       location: t.location,
@@ -408,7 +411,7 @@ export default function TicketTable({
         onOk={saveEdit}
         okText="Guardar"
         cancelText="Cancelar"
-        destroyOnHidden
+        forceRender
       >
         <Form form={form} layout="vertical">
           <Form.Item name="callerName" label="Solicitante">
