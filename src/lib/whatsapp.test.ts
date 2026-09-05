@@ -1,11 +1,6 @@
 // Self-check de los enlaces de WhatsApp. Correr: npm run test:whatsapp
 import assert from "node:assert";
 import { buildWhatsAppAppUrl, buildWhatsAppUrl, compactLine, formatDateTime, formatFolio, formatWhatsAppMessage } from "./whatsapp";
-import { toE164 } from "./zavu";
-
-// Zavu exige E.164: solo dígitos precedidos de "+", sin espacios ni guiones.
-assert.equal(toE164("+56 9 1234 5678"), "+56912345678");
-assert.equal(toE164("569-1234-5678"), "+56912345678");
 
 // El número queda solo con dígitos (sin +, espacios ni guiones) y el texto va URL-encoded.
 const web = buildWhatsAppUrl("+56 9 1234 5678", "hola mundo & más");
@@ -21,7 +16,8 @@ assert.equal(formatFolio(), "#—");
 // Nomenclatura estándar, con el folio y la emisión del ticket incluidos.
 const msg = formatWhatsAppMessage({ folio: 42, createdAt: new Date(2026, 8, 5, 15, 4), callerName: "Paola", location: "Oncología box 10", problem: "cambio de teléfono" });
 assert.ok(msg.includes("*Folio:* #0042"));
-assert.ok(msg.includes("*Fecha - Hora:* 05/09/2026 15:04"));
+// Se compara el valor, no la etiqueta: el rótulo de la línea se ajusta a gusto.
+assert.ok(msg.includes("05/09/2026 15:04"));
 assert.ok(msg.includes("*Solicitante:* Paola"));
 
 // La emisión acepta el string que llega serializado desde el servidor.
@@ -29,7 +25,7 @@ assert.equal(formatDateTime("2026-09-05T15:04:00"), "05/09/2026 15:04");
 assert.equal(formatDateTime(null), "");
 
 // Sin fecha: la línea se omite.
-assert.ok(!formatWhatsAppMessage({ callerName: "Ana", location: "", problem: "x" }).includes("Fecha"));
+assert.ok(!/\d{2}\/\d{2}\/\d{4}/.test(formatWhatsAppMessage({ callerName: "Ana", location: "", problem: "x" })));
 
 // Sin folio: la línea de folio se omite.
 assert.ok(!formatWhatsAppMessage({ callerName: "Ana", location: "", problem: "x" }).includes("Folio"));

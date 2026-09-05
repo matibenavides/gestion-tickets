@@ -26,7 +26,7 @@ export function formatWhatsAppMessage(t: TicketMessageData): string {
   const lines = [
     "*NUEVO TICKET DE SOPORTE*",
     t.folio ? `*Folio:* ${formatFolio(t.folio)}` : null,
-    emitted ? `*Fecha:* ${emitted}` : null,
+    emitted ? `*Emisión:* ${emitted}` : null,
     `*Solicitante:* ${t.callerName?.trim() || "-"}`,
     `*Ubicación:* ${t.location?.trim() || "-"}`,
     `*Requerimiento:* ${t.problem?.trim() || "-"}`,

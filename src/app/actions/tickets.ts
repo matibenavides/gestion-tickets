@@ -3,9 +3,7 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { contacts, rawTags, tickets } from "@/db/schema";
-import { formatFolio, formatWhatsAppMessage } from "@/lib/whatsapp";
-import { sendZavuMessage, sendZavuTemplate } from "@/lib/zavu";
+import { rawTags, tickets } from "@/db/schema";
 import { isRawDraft, type TicketCategory, type TicketStatus } from "@/types";
 
 function revalidateAll() {
@@ -151,44 +149,6 @@ export async function markTicketSent(id: string) {
 export async function deleteTicket(id: string) {
   await db.delete(tickets).where(eq(tickets.id, id));
   revalidateAll();
-}
-
-/** Envía el ticket por WhatsApp usando la API de Zavu y lo marca como enviado. */
-export async function sendTicketWhatsApp(id: string) {
-  const [ticket] = await db.select().from(tickets).where(eq(tickets.id, id));
-  if (!ticket) throw new Error("Ticket no encontrado.");
-  if (!ticket.assignedContactId) throw new Error("El ticket no tiene contacto asignado.");
-  const [contact] = await db
-    .select()
-    .from(contacts)
-    .where(eq(contacts.id, ticket.assignedContactId));
-  if (!contact) throw new Error("El contacto asignado ya no existe.");
-
-  // El folio se asigna antes de armar el mensaje: si el ticket venía de borrador
-  // todavía no tenía número.
-  const folio = await ensureFolio(ticket.id, ticket.ticketNumber);
-
-  const templateId = process.env.ZAVU_WHATSAPP_TEMPLATE_ID;
-  if (templateId) {
-    // ponytail: la plantilla en Zavu debe tener 4 variables en ESTE orden:
-    // {{1}} folio · {{2}} solicitante · {{3}} ubicación · {{4}} requerimiento.
-    await sendZavuTemplate(contact.whatsappNumber, templateId, {
-      "1": formatFolio(folio),
-      "2": ticket.callerName || "-",
-      "3": ticket.location || "-",
-      "4": ticket.problem || "-",
-    });
-  } else {
-    const text = formatWhatsAppMessage({
-      folio,
-      createdAt: ticket.createdAt,
-      callerName: ticket.callerName,
-      location: ticket.location,
-      problem: ticket.problem,
-    });
-    await sendZavuMessage(contact.whatsappNumber, text, "whatsapp");
-  }
-  return markTicketSent(id);
 }
 
 /** La etiqueta manda: al asignarla el ticket hereda la categoría padre del catálogo. */

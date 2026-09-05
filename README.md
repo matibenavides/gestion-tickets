@@ -174,7 +174,7 @@ src/
 │   └── actions/            Server Actions (CRUD de tickets y contactos)
 ├── components/             Interfaz (Ant Design): QuickTicketForm, TicketTable, etc.
 ├── db/                     schema.ts, index.ts (postgres + drizzle), seed, migrate
-├── lib/                    whatsapp, zavu, redis, stats (con verificaciones)
+├── lib/                    whatsapp, redis, stats (con verificaciones)
 └── types/                  Tipos y etiquetas compartidas
 ```
 
