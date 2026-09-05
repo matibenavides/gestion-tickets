@@ -10,7 +10,9 @@ services:
       POSTGRES_PASSWORD: tickets
       POSTGRES_DB: tickets
     ports:
-      - "5432:5432"
+      # 5432 del host lo ocupan los servicios nativos de PostgreSQL de Windows
+      # (postgresql-x64-14/18), así que el contenedor se publica en 5434.
+      - "5434:5432"
     volumes:
       - tickets_pgdata:/var/lib/postgresql/data
     healthcheck:

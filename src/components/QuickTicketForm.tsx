@@ -3,11 +3,10 @@
 import { App, Badge, Button, Card, Col, Divider, Flex, Input, Row, Select, Space, Tag, Typography } from "antd";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FaMagic, FaWhatsapp } from "react-icons/fa";
+import { FaWhatsapp } from "react-icons/fa";
 import { MdSave, MdStickyNote2 } from "react-icons/md";
 import { createTicket } from "@/app/actions/tickets";
 import { createRawTag, listRawTags } from "@/app/actions/tags";
-import { parseCall } from "@/lib/parser";
 import { compactLine } from "@/lib/whatsapp";
 import {
   CATEGORY_COLORS,
@@ -83,19 +82,6 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
     } finally {
       setSaving(false);
     }
-  }
-
-  function handleParse() {
-    if (!raw.trim()) {
-      message.info("Escribe la nota de la llamada primero.");
-      return;
-    }
-    const p = parseCall(raw);
-    setCallerName(p.callerName);
-    setLocation(p.location);
-    setProblem(p.problem);
-    setCategory(p.category);
-    message.success("Nota clasificada. Revisa y corrige si hace falta.");
   }
 
   function reset() {
@@ -199,14 +185,9 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
               }))}
             />
           </Flex>
-          <Space.Compact block style={{ marginTop: 8 }}>
-            <Button icon={<MdSave />} loading={saving} onClick={saveRawDraft}>
-              Almacenar Nota
-            </Button>
-            <Button type="primary" icon={<FaMagic />} onClick={handleParse} block>
-              Clasificar / Formatear
-            </Button>
-          </Space.Compact>
+          <Button icon={<MdSave />} loading={saving} onClick={saveRawDraft} block style={{ marginTop: 8 }}>
+            Almacenar Nota
+          </Button>
         </Col>
 
         <Col xs={24} md={13}>
@@ -293,7 +274,7 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
             </Button>
             <Badge count={rawDrafts.length} size="small">
               <Button icon={<MdStickyNote2 />} onClick={() => setNotesOpen(true)}>
-                Notas sin formatear
+                Notas
               </Button>
             </Badge>
             <Button type="primary" icon={<FaWhatsapp />} loading={saving} onClick={sendWhatsApp}>
