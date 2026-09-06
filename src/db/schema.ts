@@ -35,12 +35,21 @@ export const contacts = pgTable("contacts", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const zones = pgTable("zones", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const tickets = pgTable("tickets", {
   id: uuid("id").primaryKey().defaultRandom(),
   // Folio correlativo legible para humanos (autoincremental), aparte del UUID interno.
   ticketNumber: integer("ticket_number"),
   callerName: text("caller_name").notNull().default(""),
   location: text("location").notNull().default(""),
+  zoneId: uuid("zone_id").references(() => zones.id, {
+    onDelete: "set null",
+  }),
   problem: text("problem").notNull().default(""),
   rawNote: text("raw_note").notNull().default(""),
   rawTag: text("raw_tag").notNull().default(""),
@@ -66,3 +75,5 @@ export const rawTags = pgTable("raw_tags", {
 export type ContactRow = typeof contacts.$inferSelect;
 export type TicketRow = typeof tickets.$inferSelect;
 export type RawTagRow = typeof rawTags.$inferSelect;
+export type ZoneRow = typeof zones.$inferSelect;
+

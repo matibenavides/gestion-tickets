@@ -11,6 +11,7 @@ export interface StatTicket {
   category: TicketCategory;
   status: TicketStatus;
   location: string;
+  zoneName?: string | null;
   createdAt: Date;
 }
 
@@ -40,7 +41,7 @@ export function computeStats(tickets: StatTicket[], days = 14): Stats {
   for (const t of tickets) {
     byStatus.set(t.status, (byStatus.get(t.status) ?? 0) + 1);
     byCategory.set(t.category, (byCategory.get(t.category) ?? 0) + 1);
-    const zone = (t.location || "").trim() || "Sin ubicación";
+    const zone = (t.zoneName || "").trim() || "Sin zona";
     byZone.set(zone, (byZone.get(zone) ?? 0) + 1);
     const k = dayKey(new Date(t.createdAt));
     perDayMap.set(k, (perDayMap.get(k) ?? 0) + 1);

@@ -25,11 +25,18 @@ export interface Contact {
   createdAt: Date;
 }
 
+export interface Zone {
+  id: string;
+  name: string;
+}
+
 export interface Ticket {
   id: string;
   ticketNumber: number | null;
   callerName: string;
   location: string;
+  zoneId: string | null;
+  zoneName?: string | null;
   problem: string;
   rawNote: string;
   rawTag: string;
@@ -47,6 +54,14 @@ export interface RawTag {
   name: string;
   category: TicketCategory;
 }
+
+export const DEFAULT_ZONES: string[] = [
+  "Administración",
+  "Desarrollo",
+  "Oncología",
+  "Pabellón",
+  "Urgencias",
+];
 
 export const DEFAULT_RAW_TAGS: RawTag[] = [
   { name: "Desbloqueo Cuenta", category: "CUENTAS" },

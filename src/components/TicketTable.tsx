@@ -22,8 +22,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { FaWhatsapp } from "react-icons/fa";
 import { MdDelete, MdEdit, MdSearch } from "react-icons/md";
-import { deleteTicket, setTicketStatus, setTicketContact, setTicketRawTag, updateTicket } from "@/app/actions/tickets";
+import { deleteTicket, setTicketStatus, setTicketContact, setTicketRawTag, updateTicket, setTicketZone } from "@/app/actions/tickets";
 import { listRawTags } from "@/app/actions/tags";
+import { listZones } from "@/app/actions/zones";
 import {
   CATEGORY_COLORS,
   CATEGORY_LABELS,
@@ -37,6 +38,7 @@ import {
   type Ticket,
   type TicketCategory,
   type TicketStatus,
+  type Zone,
 } from "@/types";
 import { formatFolio } from "@/lib/whatsapp";
 import useClientMounted from "./useClientMounted";
@@ -48,6 +50,7 @@ const { Text } = Typography;
 interface EditForm {
   callerName: string;
   location: string;
+  zoneId?: string | null;
   problem: string;
   category: TicketCategory;
   rawTag?: string;
@@ -81,10 +84,14 @@ export default function TicketTable({
   const contactById = useMemo(() => new Map(contacts.map((c) => [c.id, c])), [contacts]);
 
   const [catalog, setCatalog] = useState<RawTag[]>(DEFAULT_RAW_TAGS);
+  const [zonesCatalog, setZonesCatalog] = useState<Zone[]>([]);
 
   useEffect(() => {
     listRawTags()
       .then(setCatalog)
+      .catch(() => {});
+    listZones()
+      .then(setZonesCatalog)
       .catch(() => {});
   }, []);
 
@@ -97,10 +104,21 @@ export default function TicketTable({
     return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [catalog, tickets]);
 
-  const zoneOptions = useMemo(() => {
-    const set = new Set(tickets.map((t) => t.location.trim()).filter(Boolean));
-    return [...set].sort().map((z) => ({ value: z, label: z }));
-  }, [tickets]);
+  const allAvailableZones = useMemo(() => {
+    const map = new Map(zonesCatalog.map((z) => [z.id, z]));
+    for (const t of tickets) {
+      if (t.zoneId && t.zoneName && !map.has(t.zoneId)) {
+        map.set(t.zoneId, { id: t.zoneId, name: t.zoneName });
+      }
+    }
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [zonesCatalog, tickets]);
+
+  const zoneFilterOptions = useMemo(() => {
+    const opts = allAvailableZones.map((z) => ({ value: z.id, label: z.name }));
+    opts.unshift({ value: "__NO_ZONE__", label: "Sin zona" });
+    return opts;
+  }, [allAvailableZones]);
 
   const editContactOptions = useMemo(() => {
     const currentId = editing?.assignedContactId;
@@ -118,13 +136,19 @@ export default function TicketTable({
       if (statusFilter && t.status !== statusFilter) return false;
       if (categoryFilter && t.category !== categoryFilter) return false;
       if (tagFilter && t.rawTag !== tagFilter) return false;
-      if (zoneFilter && t.location.trim() !== zoneFilter) return false;
+      if (zoneFilter) {
+        if (zoneFilter === "__NO_ZONE__") {
+          if (t.zoneId || t.zoneName) return false;
+        } else if (t.zoneId !== zoneFilter) {
+          return false;
+        }
+      }
       if (range) {
         const d = dayjs(t.createdAt);
         if (d.isBefore(range[0].startOf("day")) || d.isAfter(range[1].endOf("day"))) return false;
       }
       if (q) {
-        const hay = `${t.callerName} ${t.location} ${t.problem} ${t.rawTag}`.toLowerCase();
+        const hay = `${t.callerName} ${t.zoneName || ""} ${t.location} ${t.problem} ${t.rawTag}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -148,6 +172,16 @@ export default function TicketTable({
       router.refresh();
     } catch {
       message.error("No se pudo cambiar el contacto asignado.");
+    }
+  }
+
+  async function onZoneChange(id: string, zoneId: string | null) {
+    try {
+      await setTicketZone(id, zoneId);
+      message.success("Zona actualizada.");
+      router.refresh();
+    } catch {
+      message.error("No se pudo cambiar la zona.");
     }
   }
 
@@ -178,6 +212,7 @@ export default function TicketTable({
     form.resetFields();
     form.setFieldsValue({
       callerName: t.callerName,
+      zoneId: t.zoneId ?? undefined,
       location: t.location,
       problem: t.problem,
       category: t.category,
@@ -190,7 +225,12 @@ export default function TicketTable({
     if (!editing) return;
     const v = await form.validateFields();
     try {
-      await updateTicket(editing.id, { ...v, rawTag: v.rawTag ?? "", assignedContactId: v.assignedContactId ?? null });
+      await updateTicket(editing.id, { 
+        ...v, 
+        zoneId: v.zoneId ?? null,
+        rawTag: v.rawTag ?? "", 
+        assignedContactId: v.assignedContactId ?? null 
+      });
       message.success("Ticket actualizado.");
       setEditing(null);
       router.refresh();
@@ -216,6 +256,25 @@ export default function TicketTable({
       defaultSortOrder: "descend",
     },
     { title: "Solicitante", dataIndex: "callerName", width: 90, ellipsis: true, render: (v: string) => v || <Text type="secondary">—</Text> },
+    {
+      title: "Zona",
+      dataIndex: "zoneId",
+      width: 110,
+      render: (zId: string | null, row: Ticket) => (
+        <Select
+          size="small"
+          variant="filled"
+          value={zId ?? undefined}
+          placeholder="Sin zona"
+          allowClear
+          showSearch
+          optionFilterProp="label"
+          style={{ width: "100%" }}
+          onChange={(val) => onZoneChange(row.id, val ?? null)}
+          options={allAvailableZones.map((z) => ({ value: z.id, label: z.name }))}
+        />
+      ),
+    },
     { title: "Ubicación", dataIndex: "location", width: 90, ellipsis: true, render: (v: string) => v || <Text type="secondary">—</Text> },
     {
       // Una sola línea truncada; el texto completo va en el Tooltip para que una
@@ -364,7 +423,7 @@ export default function TicketTable({
             options={CATEGORY_ORDER.map((c) => ({ value: c, label: CATEGORY_LABELS[c] }))}
           />
           <Select
-            placeholder="🏷️ Etiqueta"
+            placeholder="Etiqueta"
             value={tagFilter}
             onChange={setTagFilter}
             allowClear
@@ -380,7 +439,7 @@ export default function TicketTable({
             showSearch
             optionFilterProp="label"
             style={{ flex: "1 1 130px", minWidth: 110, maxWidth: 140 }}
-            options={zoneOptions}
+            options={zoneFilterOptions}
           />
           <RangePicker
             format="DD/MM/YYYY"
@@ -401,7 +460,7 @@ export default function TicketTable({
           dataSource={filtered}
           size="small"
           tableLayout="fixed"
-          style={{ minWidth: 880 }}
+          style={{ minWidth: 980 }}
           pagination={{ pageSize: showFilters ? 10 : 5, hideOnSinglePage: !showFilters, showSizeChanger: false }}
         />
       </div>
@@ -422,7 +481,16 @@ export default function TicketTable({
             <Form.Item name="callerName" label="Solicitante">
               <Input spellCheck={true} autoCorrect="on" autoCapitalize="words" />
             </Form.Item>
-            <Form.Item name="location" label="Ubicación">
+            <Form.Item name="zoneId" label="Zona">
+              <Select
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                placeholder="Sin zona"
+                options={allAvailableZones.map((z) => ({ value: z.id, label: z.name }))}
+              />
+            </Form.Item>
+            <Form.Item name="location" label="Ubicación / Detalle">
               <Input spellCheck={true} autoCorrect="on" autoCapitalize="sentences" />
             </Form.Item>
             <Form.Item name="problem" label="Requerimiento">
@@ -465,7 +533,9 @@ export default function TicketTable({
           folio: resend?.ticket.ticketNumber,
           createdAt: resend?.ticket.createdAt,
           callerName: resend?.ticket.callerName ?? "",
-          location: resend?.ticket.location ?? "",
+          location: resend?.ticket.zoneName
+            ? (resend.ticket.location ? `${resend.ticket.zoneName} — ${resend.ticket.location}` : resend.ticket.zoneName)
+            : (resend?.ticket.location ?? ""),
           problem: resend?.ticket.problem ?? "",
         }}
         contact={resend?.contact ?? null}

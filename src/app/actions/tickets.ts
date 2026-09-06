@@ -3,8 +3,8 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { rawTags, tickets } from "@/db/schema";
-import { isRawDraft, type TicketCategory, type TicketStatus } from "@/types";
+import { rawTags, tickets, zones } from "@/db/schema";
+import { isRawDraft, type Ticket, type TicketCategory, type TicketStatus } from "@/types";
 
 function revalidateAll() {
   revalidatePath("/");
@@ -15,6 +15,7 @@ function revalidateAll() {
 export interface TicketInput {
   callerName: string;
   location: string;
+  zoneId?: string | null;
   problem: string;
   rawNote?: string;
   rawTag?: string;
@@ -44,6 +45,7 @@ function clean(input: TicketInput) {
   return {
     callerName: input.callerName?.trim() ?? "",
     location: input.location?.trim() ?? "",
+    zoneId: input.zoneId || null,
     problem: input.problem?.trim() ?? "",
     rawTag: input.rawTag?.trim() ?? "",
     category: input.category ?? "OTRO",
@@ -51,8 +53,30 @@ function clean(input: TicketInput) {
   };
 }
 
-export async function listTickets() {
-  return db.select().from(tickets).orderBy(desc(tickets.createdAt));
+export async function listTickets(): Promise<Ticket[]> {
+  const rows = await db
+    .select({
+      id: tickets.id,
+      ticketNumber: tickets.ticketNumber,
+      callerName: tickets.callerName,
+      location: tickets.location,
+      zoneId: tickets.zoneId,
+      zoneName: zones.name,
+      problem: tickets.problem,
+      rawNote: tickets.rawNote,
+      rawTag: tickets.rawTag,
+      category: tickets.category,
+      status: tickets.status,
+      assignedContactId: tickets.assignedContactId,
+      sentAt: tickets.sentAt,
+      createdAt: tickets.createdAt,
+      updatedAt: tickets.updatedAt,
+    })
+    .from(tickets)
+    .leftJoin(zones, eq(tickets.zoneId, zones.id))
+    .orderBy(desc(tickets.createdAt));
+
+  return rows as Ticket[];
 }
 
 export async function createTicket(input: TicketInput, status: TicketStatus = "DRAFT") {
@@ -126,6 +150,16 @@ export async function setTicketContact(id: string, contactId: string | null) {
   return row;
 }
 
+export async function setTicketZone(id: string, zoneId: string | null) {
+  const [row] = await db
+    .update(tickets)
+    .set({ zoneId, updatedAt: new Date() })
+    .where(eq(tickets.id, id))
+    .returning();
+  revalidateAll();
+  return row;
+}
+
 /** Al enviar por WhatsApp: registra la hora y, si estaba en borrador, pasa a "Enviado". */
 export async function markTicketSent(id: string) {
   const [current] = await db.select().from(tickets).where(eq(tickets.id, id));
@@ -170,3 +204,4 @@ export async function setTicketRawTag(id: string, rawTag: string) {
   revalidateAll();
   return row;
 }
+

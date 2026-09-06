@@ -1,9 +1,7 @@
 export const dynamic = "force-dynamic";
 
-import { desc } from "drizzle-orm";
-import { db } from "@/db";
-import { tickets as ticketsTable } from "@/db/schema";
 import { listContacts } from "@/app/actions/contacts";
+import { listTickets } from "@/app/actions/tickets";
 import QuickTicketForm from "@/components/QuickTicketForm";
 import StatCards from "@/components/StatCards";
 import TicketTable from "@/components/TicketTable";
@@ -13,7 +11,7 @@ import { isRawDraft } from "@/types";
 export default async function DashboardPage() {
   const allContacts = await listContacts();
   const activeContacts = allContacts.filter((c) => c.isActive);
-  const allTickets = await db.select().from(ticketsTable).orderBy(desc(ticketsTable.createdAt));
+  const allTickets = await listTickets();
   const rawDrafts = allTickets.filter(isRawDraft);
   const realTickets = allTickets.filter((t) => !isRawDraft(t));
   const stats = computeStats(realTickets);

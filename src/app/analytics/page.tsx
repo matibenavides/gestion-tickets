@@ -1,14 +1,12 @@
 export const dynamic = "force-dynamic";
 
-import { desc } from "drizzle-orm";
-import { db } from "@/db";
-import { tickets as ticketsTable } from "@/db/schema";
+import { listTickets } from "@/app/actions/tickets";
 import AnalyticsCharts from "@/components/AnalyticsCharts";
 import StatCards from "@/components/StatCards";
 import { computeStats } from "@/lib/stats";
 
 export default async function AnalyticsPage() {
-  const allTickets = await db.select().from(ticketsTable).orderBy(desc(ticketsTable.createdAt));
+  const allTickets = await listTickets();
   const stats = computeStats(allTickets);
 
   return (

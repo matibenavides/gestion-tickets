@@ -4,11 +4,12 @@ import { HappyProvider } from "@ant-design/happy-work-theme";
 import { App, Badge, BorderBeam, Button, Card, Col, Divider, Flex, Input, Row, Select, Space, Tag, Typography } from "antd";
 import type { BorderBeamGradient } from "antd";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FaWhatsapp } from "react-icons/fa";
 import { MdSave, MdStickyNote2 } from "react-icons/md";
 import { createTicket } from "@/app/actions/tickets";
 import { createRawTag, listRawTags } from "@/app/actions/tags";
+import { createZone, listZones } from "@/app/actions/zones";
 import { compactLine } from "@/lib/whatsapp";
 import {
   CATEGORY_COLORS,
@@ -19,6 +20,7 @@ import {
   type RawTag,
   type Ticket,
   type TicketCategory,
+  type Zone,
 } from "@/types";
 import { useThemeMode } from "./AntdRegistry";
 import RawDraftsList from "./RawDraftsList";
@@ -50,6 +52,7 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
   const [raw, setRaw] = useState("");
   const [rawTag, setRawTag] = useState<string>("");
   const [callerName, setCallerName] = useState("");
+  const [zoneId, setZoneId] = useState<string | undefined>();
   const [location, setLocation] = useState("");
   const [problem, setProblem] = useState("");
   const [category, setCategory] = useState<TicketCategory>("OTRO");
@@ -59,10 +62,15 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
   const [notesOpen, setNotesOpen] = useState(false);
 
   const [availableTags, setAvailableTags] = useState<RawTag[]>(DEFAULT_RAW_TAGS);
+  const [availableZones, setAvailableZones] = useState<Zone[]>([]);
+  const [zoneSearch, setZoneSearch] = useState("");
 
   useEffect(() => {
     listRawTags()
       .then((tags) => setAvailableTags(tags))
+      .catch(() => {});
+    listZones()
+      .then((z) => setAvailableZones(z))
       .catch(() => {});
   }, []);
 
@@ -84,6 +92,39 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
     return tagToSave;
   }
 
+  const zoneOptions = useMemo(() => {
+    const opts = availableZones.map((z) => ({ value: z.id, label: z.name }));
+    const searchTrimmed = zoneSearch.trim();
+    if (searchTrimmed && !availableZones.some((z) => z.name.toLowerCase() === searchTrimmed.toLowerCase())) {
+      opts.unshift({
+        value: `CREATE:${searchTrimmed}`,
+        label: `Crear "${searchTrimmed}"`,
+      });
+    }
+    return opts;
+  }, [availableZones, zoneSearch]);
+
+  async function handleZoneSelect(value: string | undefined) {
+    if (!value) {
+      setZoneId(undefined);
+      return;
+    }
+    if (value.startsWith("CREATE:")) {
+      const newName = value.replace("CREATE:", "").trim();
+      try {
+        const updated = await createZone(newName);
+        setAvailableZones(updated);
+        const created = updated.find((z) => z.name.toLowerCase() === newName.toLowerCase());
+        if (created) setZoneId(created.id);
+        message.success(`Zona "${newName}" creada.`);
+      } catch {
+        message.error("No se pudo crear la zona.");
+      }
+    } else {
+      setZoneId(value);
+    }
+  }
+
   async function saveRawDraft() {
     if (!raw.trim()) {
       message.warning("Escribe la nota antes de guardar.");
@@ -92,7 +133,7 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
     setSaving(true);
     try {
       const tagToSave = await ensureTag();
-      await createTicket({ callerName: "", location: "", problem: "", rawNote: raw, rawTag: tagToSave, category: "OTRO", assignedContactId: null }, "DRAFT");
+      await createTicket({ callerName: "", location: "", zoneId: null, problem: "", rawNote: raw, rawTag: tagToSave, category: "OTRO", assignedContactId: null }, "DRAFT");
       message.success("Nota guardada sin formatear.");
       reset();
       router.refresh();
@@ -107,6 +148,7 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
     setRaw("");
     setRawTag("");
     setCallerName("");
+    setZoneId(undefined);
     setLocation("");
     setProblem("");
     setCategory("OTRO");
@@ -126,7 +168,7 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
     setSaving(true);
     try {
       const tagToSave = await ensureTag();
-      await createTicket({ callerName, location, problem, rawNote: raw, rawTag: tagToSave, category, assignedContactId: contactId ?? null }, "DRAFT");
+      await createTicket({ callerName, location, zoneId: zoneId ?? null, problem, rawNote: raw, rawTag: tagToSave, category, assignedContactId: contactId ?? null }, "DRAFT");
       message.success("Borrador guardado.");
       reset();
       router.refresh();
@@ -149,7 +191,7 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
     setSaving(true);
     try {
       const tagToSave = await ensureTag();
-      const row = await createTicket({ callerName, location, problem, rawNote: raw, rawTag: tagToSave, category, assignedContactId: contactId }, "DRAFT");
+      const row = await createTicket({ callerName, location, zoneId: zoneId ?? null, problem, rawNote: raw, rawTag: tagToSave, category, assignedContactId: contactId }, "DRAFT");
       const contact = contacts.find((c) => c.id === contactId)!;
       setModal({ ticketId: row.id, folio: row.ticketNumber, createdAt: row.createdAt, contact });
     } catch (e) {
@@ -158,6 +200,9 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
       setSaving(false);
     }
   }
+
+  const selectedZone = availableZones.find((z) => z.id === zoneId);
+  const fullLocationText = selectedZone ? (location ? `${selectedZone.name} — ${location}` : selectedZone.name) : location;
 
   return (
     <Card
@@ -236,17 +281,33 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
                 autoCapitalize="words"
               />
             </div>
-            <div>
-              <Text strong>Ubicación / Zona / Piso / Box</Text>
-              <Input
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Ej: Oncología, sala de quimio, box 10"
-                spellCheck={true}
-                autoCorrect="on"
-                autoCapitalize="sentences"
-              />
-            </div>
+            <Row gutter={12}>
+              <Col span={12}>
+                <Text strong>Zona</Text>
+                <Select
+                  value={zoneId}
+                  onChange={handleZoneSelect}
+                  onSearch={setZoneSearch}
+                  placeholder="Seleccionar o crear zona..."
+                  allowClear
+                  showSearch
+                  optionFilterProp="label"
+                  style={{ width: "100%" }}
+                  options={zoneOptions}
+                />
+              </Col>
+              <Col span={12}>
+                <Text strong>Ubicación / Detalle</Text>
+                <Input
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Ej: sala de quimio, box 10"
+                  spellCheck={true}
+                  autoCorrect="on"
+                  autoCapitalize="sentences"
+                />
+              </Col>
+            </Row>
             <div>
               <Text strong>Requerimiento / Problema</Text>
               <TextArea
@@ -297,7 +358,7 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
         <Col flex="auto">
           <Tag color={CATEGORY_COLORS[category]}>{CATEGORY_LABELS[category]}</Tag>
           <Text type="secondary" style={{ fontFamily: "var(--font-geist-mono), monospace" }}>
-            {compactLine({ callerName, location, problem }) || "Vista previa: Nombre | Lugar | Problema"}
+            {compactLine({ callerName, location: fullLocationText, problem }) || "Vista previa: Nombre | Lugar | Problema"}
           </Text>
         </Col>
         <Col>
@@ -329,7 +390,7 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
       <WhatsAppModal
         open={!!modal}
         ticketId={modal?.ticketId}
-        data={{ folio: modal?.folio, createdAt: modal?.createdAt, callerName, location, problem }}
+        data={{ folio: modal?.folio, createdAt: modal?.createdAt, callerName, location: fullLocationText, problem }}
         contact={modal?.contact ?? null}
         onClose={() => setModal(null)}
         onSent={() => {
