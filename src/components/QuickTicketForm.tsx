@@ -122,7 +122,7 @@ const NEBULA: Record<"light" | "dark", BorderBeamGradient> = {
       value: z.id,
       searchValue: z.name,
       label: (
-        <Flex align="center" justify="space-between" style={{ width: "100%" }} onClick={(e) => e.stopPropagation()}>
+        <Flex align="center" justify="space-between" style={{ width: "100%" }}>
           <span>{z.name}</span>
           <Button
             type="text"
