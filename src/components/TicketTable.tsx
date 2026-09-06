@@ -22,9 +22,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { FaWhatsapp } from "react-icons/fa";
 import { MdDelete, MdEdit, MdSearch } from "react-icons/md";
-import { deleteTicket, setTicketStatus, setTicketContact, setTicketRawTag, updateTicket, setTicketZone } from "@/app/actions/tickets";
+import { deleteTicket, setTicketContact, setTicketRawTag, setTicketStatus, setTicketZone, updateTicket } from "@/app/actions/tickets";
 import { listRawTags } from "@/app/actions/tags";
-import { listZones } from "@/app/actions/zones";
+import { deleteZone, listZones } from "@/app/actions/zones";
 import {
   CATEGORY_COLORS,
   CATEGORY_LABELS,
@@ -66,7 +66,7 @@ export default function TicketTable({
   contacts: Contact[];
   showFilters?: boolean;
 }) {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const router = useRouter();
   const [form] = Form.useForm<EditForm>();
 
@@ -114,11 +114,57 @@ export default function TicketTable({
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [zonesCatalog, tickets]);
 
-  const zoneFilterOptions = useMemo(() => {
-    const opts = allAvailableZones.map((z) => ({ value: z.id, label: z.name }));
-    opts.unshift({ value: "__NO_ZONE__", label: "Sin zona" });
-    return opts;
+  async function handleDeleteZone(id: string, name: string) {
+    try {
+      const updated = await deleteZone(id);
+      setZonesCatalog(updated);
+      if (zoneFilter === id) setZoneFilter(undefined);
+      message.success(`Zona "${name}" eliminada.`);
+      router.refresh();
+    } catch {
+      message.error("No se pudo eliminar la zona.");
+    }
+  }
+
+  function confirmDeleteZone(id: string, name: string) {
+    modal.confirm({
+      title: `¿Eliminar zona "${name}"?`,
+      content: "Los tickets asociados a esta zona quedarán marcados como 'Sin zona'.",
+      okText: "Sí, eliminar",
+      okType: "danger",
+      cancelText: "Cancelar",
+      onOk: async () => {
+        await handleDeleteZone(id, name);
+      },
+    });
+  }
+
+  const zoneSelectOptions = useMemo(() => {
+    return allAvailableZones.map((z) => ({
+      value: z.id,
+      searchValue: z.name,
+      label: (
+        <Flex align="center" justify="space-between" style={{ width: "100%" }} onClick={(e) => e.stopPropagation()}>
+          <span>{z.name}</span>
+          <Button
+            type="text"
+            size="small"
+            danger
+            icon={<MdDelete />}
+            onClick={(e) => {
+              e.stopPropagation();
+              confirmDeleteZone(z.id, z.name);
+            }}
+            title="Eliminar zona"
+          />
+        </Flex>
+      ),
+    }));
   }, [allAvailableZones]);
+
+  const zoneFilterOptions = useMemo(() => {
+    return [{ value: "__NO_ZONE__", searchValue: "Sin zona", label: <span>Sin zona</span> }, ...zoneSelectOptions];
+  }, [zoneSelectOptions]);
 
   const editContactOptions = useMemo(() => {
     const currentId = editing?.assignedContactId;
@@ -268,10 +314,10 @@ export default function TicketTable({
           placeholder="Sin zona"
           allowClear
           showSearch
-          optionFilterProp="label"
+          filterOption={(input, option) => (option?.searchValue ?? "").toLowerCase().includes(input.toLowerCase())}
           style={{ width: "100%" }}
           onChange={(val) => onZoneChange(row.id, val ?? null)}
-          options={allAvailableZones.map((z) => ({ value: z.id, label: z.name }))}
+          options={zoneSelectOptions}
         />
       ),
     },
@@ -432,12 +478,12 @@ export default function TicketTable({
             options={allAvailableTags.map((t) => ({ value: t.name, label: `🏷️ ${t.name}` }))}
           />
           <Select
-            placeholder="Zona"
+            placeholder="📍 Zona"
             value={zoneFilter}
             onChange={setZoneFilter}
             allowClear
             showSearch
-            optionFilterProp="label"
+            filterOption={(input, option) => (option?.searchValue ?? "").toLowerCase().includes(input.toLowerCase())}
             style={{ flex: "1 1 130px", minWidth: 110, maxWidth: 140 }}
             options={zoneFilterOptions}
           />
@@ -485,9 +531,9 @@ export default function TicketTable({
               <Select
                 allowClear
                 showSearch
-                optionFilterProp="label"
+                filterOption={(input, option) => (option?.searchValue ?? "").toLowerCase().includes(input.toLowerCase())}
                 placeholder="Sin zona"
-                options={allAvailableZones.map((z) => ({ value: z.id, label: z.name }))}
+                options={zoneSelectOptions}
               />
             </Form.Item>
             <Form.Item name="location" label="Ubicación / Detalle">

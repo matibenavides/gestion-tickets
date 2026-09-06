@@ -1,15 +1,15 @@
 "use client";
 
 import { HappyProvider } from "@ant-design/happy-work-theme";
-import { App, Badge, BorderBeam, Button, Card, Col, Divider, Flex, Input, Row, Select, Space, Tag, Typography } from "antd";
+import { App, Badge, BorderBeam, Button, Card, Col, Divider, Flex, Input, Popconfirm, Row, Select, Space, Tag, Typography } from "antd";
 import type { BorderBeamGradient } from "antd";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { FaWhatsapp } from "react-icons/fa";
-import { MdSave, MdStickyNote2 } from "react-icons/md";
+import { MdDelete, MdSave, MdStickyNote2 } from "react-icons/md";
 import { createTicket } from "@/app/actions/tickets";
 import { createRawTag, listRawTags } from "@/app/actions/tags";
-import { createZone, listZones } from "@/app/actions/zones";
+import { createZone, deleteZone, listZones } from "@/app/actions/zones";
 import { compactLine } from "@/lib/whatsapp";
 import {
   CATEGORY_COLORS,
@@ -42,10 +42,8 @@ const NEBULA: Record<"light" | "dark", BorderBeamGradient> = {
     { color: "#9254de", percent: 44 },
     { color: "#ffadd2", percent: 100 },
   ],
-};
-
-export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Contact[]; rawDrafts: Ticket[] }) {
-  const { message } = App.useApp();
+};export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Contact[]; rawDrafts: Ticket[] }) {
+  const { message, modal } = App.useApp();
   const router = useRouter();
   const { mode } = useThemeMode();
 
@@ -58,7 +56,7 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
   const [category, setCategory] = useState<TicketCategory>("OTRO");
   const [contactId, setContactId] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
-  const [modal, setModal] = useState<{ ticketId: string; folio: number | null; createdAt: Date; contact: Contact } | null>(null);
+  const [waModal, setWaModal] = useState<{ ticketId: string; folio: number | null; createdAt: Date; contact: Contact } | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
 
   const [availableTags, setAvailableTags] = useState<RawTag[]>(DEFAULT_RAW_TAGS);
@@ -92,17 +90,64 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
     return tagToSave;
   }
 
+  async function handleDeleteZone(id: string, name: string) {
+    try {
+      const updated = await deleteZone(id);
+      setAvailableZones(updated);
+      if (zoneId === id) {
+        setZoneId(undefined);
+      }
+      message.success(`Zona "${name}" eliminada.`);
+      router.refresh();
+    } catch {
+      message.error("No se pudo eliminar la zona.");
+    }
+  }
+
+  function confirmDeleteZone(id: string, name: string) {
+    modal.confirm({
+      title: `¿Eliminar zona "${name}"?`,
+      content: "Los tickets asociados a esta zona quedarán marcados como 'Sin zona'.",
+      okText: "Sí, eliminar",
+      okType: "danger",
+      cancelText: "Cancelar",
+      onOk: async () => {
+        await handleDeleteZone(id, name);
+      },
+    });
+  }
+
   const zoneOptions = useMemo(() => {
-    const opts = availableZones.map((z) => ({ value: z.id, label: z.name }));
+    const opts = availableZones.map((z) => ({
+      value: z.id,
+      searchValue: z.name,
+      label: (
+        <Flex align="center" justify="space-between" style={{ width: "100%" }} onClick={(e) => e.stopPropagation()}>
+          <span>{z.name}</span>
+          <Button
+            type="text"
+            size="small"
+            danger
+            icon={<MdDelete />}
+            onClick={(e) => {
+              e.stopPropagation();
+              confirmDeleteZone(z.id, z.name);
+            }}
+            title="Eliminar zona"
+          />
+        </Flex>
+      ),
+    }));
     const searchTrimmed = zoneSearch.trim();
     if (searchTrimmed && !availableZones.some((z) => z.name.toLowerCase() === searchTrimmed.toLowerCase())) {
       opts.unshift({
         value: `CREATE:${searchTrimmed}`,
-        label: `Crear "${searchTrimmed}"`,
+        searchValue: searchTrimmed,
+        label: <span>Crear "{searchTrimmed}"</span>,
       });
     }
     return opts;
-  }, [availableZones, zoneSearch]);
+  }, [availableZones, zoneSearch, zoneId]);
 
   async function handleZoneSelect(value: string | undefined) {
     if (!value) {
@@ -193,7 +238,7 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
       const tagToSave = await ensureTag();
       const row = await createTicket({ callerName, location, zoneId: zoneId ?? null, problem, rawNote: raw, rawTag: tagToSave, category, assignedContactId: contactId }, "DRAFT");
       const contact = contacts.find((c) => c.id === contactId)!;
-      setModal({ ticketId: row.id, folio: row.ticketNumber, createdAt: row.createdAt, contact });
+      setWaModal({ ticketId: row.id, folio: row.ticketNumber, createdAt: row.createdAt, contact });
     } catch (e) {
       message.error(e instanceof Error ? e.message : "Error al guardar.");
     } finally {
@@ -291,7 +336,7 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
                   placeholder="Seleccionar o crear zona..."
                   allowClear
                   showSearch
-                  optionFilterProp="label"
+                  filterOption={(input, option) => (option?.searchValue ?? "").toLowerCase().includes(input.toLowerCase())}
                   style={{ width: "100%" }}
                   options={zoneOptions}
                 />
@@ -388,13 +433,13 @@ export default function QuickTicketForm({ contacts, rawDrafts }: { contacts: Con
       />
 
       <WhatsAppModal
-        open={!!modal}
-        ticketId={modal?.ticketId}
-        data={{ folio: modal?.folio, createdAt: modal?.createdAt, callerName, location: fullLocationText, problem }}
-        contact={modal?.contact ?? null}
-        onClose={() => setModal(null)}
+        open={!!waModal}
+        ticketId={waModal?.ticketId}
+        data={{ folio: waModal?.folio, createdAt: waModal?.createdAt, callerName, location: fullLocationText, problem }}
+        contact={waModal?.contact ?? null}
+        onClose={() => setWaModal(null)}
         onSent={() => {
-          setModal(null);
+          setWaModal(null);
           reset();
           router.refresh();
         }}
