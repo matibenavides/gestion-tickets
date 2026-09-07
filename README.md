@@ -97,7 +97,7 @@ siguientes datos de conexión: host `localhost`, puerto `5432`, base de datos
 El código se versiona en el repositorio, pero los datos (tickets y contactos)
 residen en un volumen de Docker local a cada equipo. Una instalación nueva parte
 con la base de datos vacía, con la excepción de los contactos de ejemplo cargados
-por el proceso de `seed`. Los registros no se transfieren junto con el código.
+por el proceso de `seed`.
 
 Para migrar los datos de un equipo a otro:
 
