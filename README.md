@@ -6,6 +6,12 @@ Ubicación y Requerimiento, y enviarlo al supervisor o técnico correspondiente 
 WhatsApp. La información se almacena en PostgreSQL, lo que garantiza su
 persistencia frente a reinicios o apagados del equipo.
 
+## Demo
+
+
+<video src="docs/demovideo.mp4" controls width="100%"></video>
+
+
 ## Contenido
 
 - [Stack tecnológico](#stack-tecnológico)
