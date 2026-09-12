@@ -1,3 +1,7 @@
+
+
+
+
 # Despacho de Tickets de Soporte con Envío por WhatsApp
 
 Aplicación web para el registro y despacho de tickets de soporte técnico. Permite
@@ -9,7 +13,7 @@ persistencia frente a reinicios o apagados del equipo.
 ## Demo
 
 
-<video src="docs/demovideo.mp4" controls width="100%"></video>
+[<video src="docs/demovideo.mp4" controls width="100%"></video>](https://github.com/user-attachments/assets/389a5367-2438-43be-b0e2-c7ec5a25c990)
 
 
 ## Contenido
